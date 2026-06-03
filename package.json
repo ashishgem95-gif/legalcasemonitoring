@@ -1,0 +1,11 @@
+{
+  "name": "legal-case-monitoring-project",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "backend": "node backend/src/index.js",
+    "frontend": "npm run dev --prefix frontend",
+    "start": "npx --yes concurrently \"node backend/src/index.js\" \"npm run dev --prefix frontend\""
+  }
+}
