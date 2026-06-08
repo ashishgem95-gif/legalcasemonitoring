@@ -1,36 +1,37 @@
 import React, { useState } from 'react';
+import api from '../utils/api';
 
 const MOCK_USERS = [
   {
     id: 'admin',
-    name: 'Shri R. K. Singh',
-    email: 'admin@railways.gov.in',
-    password: 'admin',
+    name: 'Ashish Sodhi',
+    email: 'admin@rb.gov.in',
+    password: 'abcd1234',
     role: 'Super Admin / Central Legal Cell',
     railwayScope: 'All',
     desc: 'Complete global monitoring access to all cases across all 17 Zonal Railways and Divisions.'
   },
   {
-    id: 'nr_nodal',
-    name: 'Smt. Anjali Sharma',
-    email: 'nr_nodal@railways.gov.in',
+    id: 'dircc',
+    name: 'Gomathi Shankar',
+    email: 'dir@rb.gov.in',
     password: 'password',
     role: 'Nodal Officer (Northern Railway - NR)',
     railwayScope: 'NR',
     desc: 'Restricted view. Only displays and manages cases originating from the Northern Railway Zone.'
   },
   {
-    id: 'er_nodal',
-    name: 'Shri Manoj Mukherjee',
-    email: 'er_nodal@railways.gov.in',
+    id: 'aso1cc',
+    name: 'Avinash',
+    email: 'aso@rb.gov.in',
     password: 'password',
     role: 'Nodal Officer (Eastern Railway - ER)',
     railwayScope: 'ER',
     desc: 'Restricted view. Only displays and manages cases originating from the Eastern Railway Zone.'
   },
   {
-    id: 'wr_nodal',
-    name: 'Shri Vikram Mehta',
+    id: 'aso2cc',
+    name: 'Aakash',
     email: 'wr_nodal@railways.gov.in',
     password: 'password',
     role: 'Nodal Officer (Western Railway - WR)',
@@ -44,27 +45,36 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
-    // Check credentials against mock users
-    const matched = MOCK_USERS.find(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password
-    );
-
-    if (matched) {
-      localStorage.setItem('user', JSON.stringify(matched));
-      onLogin(matched);
-    } else {
-      setError('अमान्य क्रेडेंशियल! कृपया सही ईमेल और पासवर्ड दर्ज करें। / Invalid Credentials! Please use correct email and password.');
+    try {
+      const response = await api.login(email, password);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      localStorage.setItem('ccms_token', response.token);
+      onLogin(response.user);
+    } catch (err) {
+      setError(err.message || 'अमान्य क्रेडेंशियल! / Invalid Credentials! Please use correct email and password.');
     }
   };
 
-  const handleQuickLogin = (user) => {
-    localStorage.setItem('user', JSON.stringify(user));
-    onLogin(user);
+  const handleQuickLogin = async (user) => {
+    setError(null);
+    try {
+      // Find the user's password from MOCK_USERS
+      const mockUser = MOCK_USERS.find(u => u.id === user.id);
+      const pass = mockUser ? mockUser.password : 'password';
+
+      const response = await api.login(user.id, pass);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      localStorage.setItem('ccms_token', response.token);
+      onLogin(response.user);
+    } catch (err) {
+      setError(err.message || 'Quick login failed.');
+    }
   };
+
 
   return (
     <div style={{
@@ -196,11 +206,11 @@ export default function Login({ onLogin }) {
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div className="form-group">
-                <label className="form-label" style={{ color: '#4b5563' }}>Official Email / आधिकारिक ईमेल</label>
+                <label className="form-label" style={{ color: '#4b5563' }}>Official Email or ID / आधिकारिक ईमेल या आईडी</label>
                 <input
-                  type="email"
+                  type="text"
                   className="form-control"
-                  placeholder="e.g. name@railways.gov.in"
+                  placeholder="e.g. admin or name@railways.gov.in"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -244,93 +254,7 @@ export default function Login({ onLogin }) {
           </div>
         </div>
 
-        {/* Bottom Section: Quick Access Accounts Dashboard Board */}
-        <div style={{
-          background: '#f9fafb',
-          borderTop: '1px solid #e5e7eb',
-          padding: '2rem 3rem'
-        }}>
-          <h3 style={{
-            fontSize: '1rem',
-            fontWeight: 800,
-            color: '#0f2c59',
-            marginBottom: '0.35rem',
-            fontFamily: 'Outfit',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            <svg width="18" height="18" fill="none" stroke="#ff9933" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-            </svg>
-            त्वरित लॉगिन बोर्ड / Quick Access Testing Board (Zonal Case Partitioning)
-          </h3>
-          <p style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-            Click on any profile badge below to instantly authenticate and test how the portal dynamically filters, compiles, and restricts cases matching the ID's designated Railway Zone.
-          </p>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '1.25rem'
-          }}>
-            {MOCK_USERS.map((user) => (
-              <button
-                key={user.id}
-                onClick={() => handleQuickLogin(user)}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '10px',
-                  padding: '1.25rem',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                  outline: 'none'
-                }}
-                className="quick-login-card"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#ff9933';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.08)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#d1d5db';
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    color: user.railwayScope === 'All' ? '#1e3a8a' : '#b45309',
-                    background: user.railwayScope === 'All' ? '#eff6ff' : '#fffaf5',
-                    padding: '0.2rem 0.5rem',
-                    borderRadius: '6px',
-                    border: `1px solid ${user.railwayScope === 'All' ? '#bfdbfe' : '#ffe9db'}`
-                  }}>
-                    {user.railwayScope === 'All' ? 'GLOBAL SCOPE' : `${user.railwayScope} ZONE`}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>Click to Login →</span>
-                </div>
-
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f2c59' }}>{user.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#4b5563', fontWeight: 600, marginTop: '0.1rem' }}>{user.role}</div>
-                </div>
-
-                <div style={{ fontSize: '0.7rem', color: '#6b7280', lineHeight: '1.4', marginTop: '0.25rem', borderTop: '1px dashed #e5e7eb', paddingTop: '0.5rem' }}>
-                  {user.desc}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
 
       </div>
     </div>

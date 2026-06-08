@@ -1,5 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const crypto = require('crypto');
+
 
 // The DB file is at the workspace root
 const dbPath = path.resolve(__dirname, '..', '..', '..', 'legal_tracker.db');
@@ -235,6 +237,103 @@ const db = new sqlite3.Database(dbPath, (err) => {
           console.log('case_alerts table verified/created.');
         }
       });
+
+      // Create users table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id VARCHAR PRIMARY KEY,
+          name VARCHAR NOT NULL,
+          email VARCHAR UNIQUE NOT NULL,
+          password_hash VARCHAR NOT NULL,
+          salt VARCHAR NOT NULL,
+          role VARCHAR NOT NULL,
+          railway_scope VARCHAR NOT NULL,
+          desc TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `, (err) => {
+        if (err) {
+          console.error('Failed to create users table:', err);
+        } else {
+          console.log('users table verified/created.');
+          // Seed users if empty
+          db.get('SELECT COUNT(*) AS count FROM users', [], (err, row) => {
+            if (!err && row && row.count === 0) {
+              console.log('Pre-seeding users database...');
+              
+              const seedUsers = [
+                {
+                  id: 'admin',
+                  name: 'Shri R. K. Singh',
+                  email: 'admin@railways.gov.in',
+                  password: 'abcd1234',
+                  role: 'Super Admin / Central Legal Cell',
+                  railwayScope: 'All',
+                  desc: 'Complete global monitoring access to all cases across all 17 Zonal Railways and Divisions.'
+                },
+                {
+                  id: 'nr_nodal',
+                  name: 'Smt. Anjali Sharma',
+                  email: 'nr_nodal@railways.gov.in',
+                  password: 'password',
+                  role: 'Nodal Officer (Northern Railway - NR)',
+                  railwayScope: 'NR',
+                  desc: 'Restricted view. Only displays and manages cases originating from the Northern Railway Zone.'
+                },
+                {
+                  id: 'er_nodal',
+                  name: 'Shri Manoj Mukherjee',
+                  email: 'er_nodal@railways.gov.in',
+                  password: 'password',
+                  role: 'Nodal Officer (Eastern Railway - ER)',
+                  railwayScope: 'ER',
+                  desc: 'Restricted view. Only displays and manages cases originating from the Eastern Railway Zone.'
+                },
+                {
+                  id: 'wr_nodal',
+                  name: 'Shri Vikram Mehta',
+                  email: 'wr_nodal@railways.gov.in',
+                  password: 'password',
+                  role: 'Nodal Officer (Western Railway - WR)',
+                  railwayScope: 'WR',
+                  desc: 'Restricted view. Only displays and manages cases originating from the Western Railway Zone.'
+                }
+              ];
+
+              const stmt = db.prepare('INSERT INTO users (id, name, email, password_hash, salt, role, railway_scope, desc) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+              
+              seedUsers.forEach((u) => {
+                const salt = crypto.randomBytes(16).toString('hex');
+                const hash = crypto.pbkdf2Sync(u.password, salt, 1000, 64, 'sha512').toString('hex');
+                stmt.run(u.id, u.name, u.email.toLowerCase(), hash, salt, u.role, u.railwayScope, u.desc, (err) => {
+                  if (err) console.error(`Failed to seed user ${u.id}:`, err);
+                });
+              });
+              
+              stmt.finalize();
+              console.log('Users database pre-seeding completed.');
+            }
+          });
+        }
+      });
+
+      // Create user_sessions table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS user_sessions (
+          token VARCHAR PRIMARY KEY,
+          user_id VARCHAR NOT NULL,
+          expires_at TIMESTAMP NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `, (err) => {
+        if (err) {
+          console.error('Failed to create user_sessions table:', err);
+        } else {
+          console.log('user_sessions table verified/created.');
+        }
+      });
+
 
       // Helper to add missing columns to cases table
       const addColumn = (colName, colType) => {

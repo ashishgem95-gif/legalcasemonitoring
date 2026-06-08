@@ -8,6 +8,8 @@ import Reminders from './components/Reminders';
 import Citations from './components/Citations';
 import FileRegistryApp from './components/FileRegistryApp';
 import Login from './components/Login';
+import api from './utils/api';
+
 
 function Header({ user, onLogout }) {
   const location = useLocation();
@@ -93,12 +95,14 @@ function Header({ user, onLogout }) {
             >
               कानूनी उद्धरण / Legal Citations
             </Link>
-            <Link 
-              to="/file-registry" 
-              className={`nav-link ${location.pathname.startsWith('/file-registry') ? 'active' : ''}`}
-            >
-              फाइल संचलन पंजी / File Registry
-            </Link>
+            {user && user.id === 'admin' && (
+              <Link 
+                to="/file-registry" 
+                className={`nav-link ${location.pathname.startsWith('/file-registry') ? 'active' : ''}`}
+              >
+                फाइल संचलन पंजी / File Registry
+              </Link>
+            )}
           </nav>
           
           <div className="nav-actions">
@@ -126,8 +130,7 @@ export default function App() {
   });
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
+    api.logout();
   };
 
   if (!user) {
@@ -167,7 +170,7 @@ export default function App() {
             <Route path="/cases/:id/edit" element={<CaseForm />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/citations" element={<Citations />} />
-            <Route path="/file-registry/*" element={<FileRegistryApp />} />
+            <Route path="/file-registry/*" element={user && user.id === 'admin' ? <FileRegistryApp /> : <Home />} />
           </Routes>
         </main>
         

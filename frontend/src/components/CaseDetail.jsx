@@ -122,6 +122,16 @@ export default function CaseDetail() {
     try {
       setLoading(true);
       const caseData = await api.getCaseById(id);
+
+      // Authorization Check
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user && user.railwayScope && user.railwayScope !== 'All' && caseData.railway !== user.railwayScope) {
+          throw new Error('Unauthorized Access: You do not have permission to view cases outside your assigned railway zone.');
+        }
+      }
+
       setCaseObj(caseData);
       
       // Populate progression local states

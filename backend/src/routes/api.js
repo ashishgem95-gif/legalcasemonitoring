@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const { authenticateToken } = require('../middleware/auth');
+const { login, logout } = require('../controllers/authController');
 
 // Configure multer to store uploaded files in memory buffers
 const upload = multer({ storage: multer.memoryStorage() });
@@ -19,7 +21,8 @@ const {
 const {
   getAlerts,
   markAlertAsRead,
-  triggerManualCrawl
+  triggerManualCrawl,
+  checkDueCases
 } = require('../controllers/alertController');
 
 const {
@@ -60,6 +63,14 @@ const {
   createMovement
 } = require('../controllers/movementController');
 
+// Auth Endpoints
+router.post('/auth/login', login);
+
+// Apply auth middleware to protect all subsequent routes
+router.use(authenticateToken);
+
+router.post('/auth/logout', logout);
+
 // Cases Endpoints
 router.get('/cases', getCases);
 router.post('/cases/parse-file', parseCase);
@@ -70,6 +81,7 @@ router.post('/cases', createCase);
 router.put('/cases/:id', updateCase);
 router.delete('/cases/:id', deleteCase);
 router.post('/cases/trigger-crawl', triggerManualCrawl);
+router.post('/cases/check-due-cases', checkDueCases);
 
 // Alerts Endpoints
 router.get('/alerts', getAlerts);

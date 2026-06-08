@@ -18,13 +18,21 @@ const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
 // GET /api/alerts - List all unread notifications joined with case details
 const getAlerts = async (req, res) => {
   try {
-    const alerts = await dbAll(`
-      SELECT a.*, c.case_ref_no, c.applicant 
+    const { railway } = req.query;
+    let query = `
+      SELECT a.*, c.case_ref_no, c.applicant, c.railway 
       FROM case_alerts a 
       JOIN cases c ON a.case_id = c.id
       WHERE a.is_read = 0
-      ORDER BY a.created_at DESC
-    `);
+    `;
+    const params = [];
+    if (railway) {
+      query += ' AND c.railway = ?';
+      params.push(railway);
+    }
+    query += ' ORDER BY a.created_at DESC';
+
+    const alerts = await dbAll(query, params);
     res.json(alerts);
   } catch (err) {
     console.error('Error fetching alerts:', err);
@@ -47,7 +55,7 @@ const markAlertAsRead = async (req, res) => {
 // POST /api/cases/trigger-crawl - Execute a manual crawl of all case links immediately
 const triggerManualCrawl = async (req, res) => {
   try {
-    const result = await scraperService.checkCaseLinks();
+    const result = await scraperService.checkCaseLinks(req.headers, false);
     res.json({
       status: 'success',
       scrapedCount: result.checkedCount,
@@ -59,8 +67,31 @@ const triggerManualCrawl = async (req, res) => {
   }
 };
 
+// POST /api/cases/check-due-cases - Start a check of only past-due cases in the background
+const checkDueCases = async (req, res) => {
+  try {
+    // Run the check in the background asynchronously (do not await)
+    scraperService.checkCaseLinks(req.headers, true)
+      .then(result => {
+        console.log(`[Background Sync] Due cases check completed. Scraped: ${result.checkedCount}, Alerts: ${result.alertsCreated}`);
+      })
+      .catch(err => {
+        console.error('[Background Sync] Failed during due cases scan:', err.message);
+      });
+
+    res.json({
+      status: 'checking',
+      message: 'Background synchronisation of due court cases initiated.'
+    });
+  } catch (err) {
+    console.error('Error initiating due cases check:', err);
+    res.status(500).json({ error: 'Failed to initiate court updates check.' });
+  }
+};
+
 module.exports = {
   getAlerts,
   markAlertAsRead,
-  triggerManualCrawl
+  triggerManualCrawl,
+  checkDueCases
 };

@@ -6,11 +6,13 @@ const API_BASE_URL = `http://${window.location.hostname}:5000/api`;
 async function request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
   
+  const token = localStorage.getItem('ccms_token');
   const isFormData = options.body instanceof FormData;
   const headers = {
     'x-ai-provider': localStorage.getItem('ccms_provider') || 'gemini',
     'x-ai-model': localStorage.getItem('ccms_model') || '',
     'x-ai-api-key': localStorage.getItem('ccms_apikey') || '',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...options.headers,
   };
 
@@ -28,8 +30,17 @@ async function request(endpoint, options = {}) {
   }
 
   const response = await fetch(url, config);
+  
+  if (response.status === 401 && endpoint !== '/auth/login') {
+    localStorage.removeItem('user');
+    localStorage.removeItem('ccms_token');
+    window.location.reload();
+    return;
+  }
+
   if (!response.ok) {
     let errorMessage = `Request failed with status ${response.status}`;
+
     try {
       const errorData = await response.json();
       if (errorData && errorData.error) {
@@ -45,6 +56,28 @@ async function request(endpoint, options = {}) {
 }
 
 export const api = {
+  // Auth APIs
+  login: (email, password) => {
+    return request('/auth/login', {
+      method: 'POST',
+      body: { email, password },
+    });
+  },
+
+  logout: () => {
+    return request('/auth/logout', {
+      method: 'POST',
+    })
+      .catch((err) => {
+        console.error('Logout API error:', err);
+      })
+      .finally(() => {
+        localStorage.removeItem('user');
+        localStorage.removeItem('ccms_token');
+        window.location.reload();
+      });
+  },
+
   // Case APIs
   getCases: (params = {}) => {
     const query = new URLSearchParams();
@@ -205,6 +238,19 @@ export const api = {
     if (params.search) query.append('search', params.search);
     if (params.status) query.append('status', params.status);
     if (params.zonal_railway) query.append('zonal_railway', params.zonal_railway);
+    
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user && user.railwayScope && user.railwayScope !== 'All') {
+          query.set('zonal_railway', user.railwayScope);
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing user scope from localStorage:', e);
+    }
+
     const queryString = query.toString();
     return request(`/physical-files${queryString ? `?${queryString}` : ''}`);
   },
@@ -245,7 +291,20 @@ export const api = {
 
   // Alerts & Crawler APIs
   getAlerts: () => {
-    return request('/alerts');
+    const query = new URLSearchParams();
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user && user.railwayScope && user.railwayScope !== 'All') {
+          query.append('railway', user.railwayScope);
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing user scope from localStorage:', e);
+    }
+    const queryString = query.toString();
+    return request(`/alerts${queryString ? `?${queryString}` : ''}`);
   },
   markAlertAsRead: (id) => {
     return request(`/alerts/${id}/read`, {
@@ -254,6 +313,11 @@ export const api = {
   },
   triggerCrawl: () => {
     return request('/cases/trigger-crawl', {
+      method: 'POST',
+    });
+  },
+  checkDueCases: () => {
+    return request('/cases/check-due-cases', {
       method: 'POST',
     });
   },

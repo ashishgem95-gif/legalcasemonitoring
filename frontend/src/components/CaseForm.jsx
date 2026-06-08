@@ -86,6 +86,15 @@ export default function CaseForm() {
         return dStr.split('T')[0];
       };
 
+      // Authorization Check
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user && user.railwayScope && user.railwayScope !== 'All' && data.railway !== user.railwayScope) {
+          throw new Error('Unauthorized Access: You do not have permission to edit cases outside your assigned railway zone.');
+        }
+      }
+
       setFormData({
         case_type: data.case_type || '',
         case_number: data.case_number || '',
@@ -116,7 +125,7 @@ export default function CaseForm() {
       setError(null);
     } catch (err) {
       console.error(err);
-      setError('Failed to fetch case details for editing.');
+      setError(err.message || 'Failed to fetch case details for editing.');
     } finally {
       setFetching(false);
     }

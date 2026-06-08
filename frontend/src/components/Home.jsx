@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 
@@ -23,15 +23,74 @@ export default function Home() {
   const [alerts, setAlerts] = useState([]);
   const [scanning, setScanning] = useState(false);
   const [scanStatus, setScanStatus] = useState('');
+  const [toasts, setToasts] = useState([]);
+  const initialAlertIds = useRef(null);
 
   useEffect(() => {
     fetchCases();
-    fetchAlerts();
+    fetchAlerts(true); // Establish initial baseline of existing alerts
+    triggerDueCasesCheck();
     const interval = setInterval(() => {
       setLiveTime(new Date());
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const addToast = (alert) => {
+    const id = alert.id;
+    setToasts(prev => {
+      if (prev.some(t => t.id === id)) return prev;
+      const newToast = {
+        id,
+        case_ref_no: alert.case_ref_no,
+        message: alert.message,
+        created_at: alert.created_at
+      };
+      return [...prev, newToast];
+    });
+
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 6000);
+  };
+
+  const triggerDueCasesCheck = async () => {
+    try {
+      setScanning(true);
+      setScanStatus('Checking past-due court cases...');
+      await api.checkDueCases();
+      setTimeout(async () => {
+        await fetchAlerts();
+        await fetchCases();
+        setScanStatus('');
+      }, 5000);
+    } catch (err) {
+      console.error('Error on auto due cases check:', err);
+      setScanStatus('');
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleCheckDueCases = async () => {
+    try {
+      setScanning(true);
+      setScanStatus('Initiating check for past-due court cases...');
+      await api.checkDueCases();
+      setScanStatus('Sync running in background...');
+      setTimeout(async () => {
+        await fetchAlerts();
+        await fetchCases();
+        setScanStatus('Due cases synchronization complete!');
+        setTimeout(() => setScanStatus(''), 4000);
+      }, 5000);
+    } catch (err) {
+      console.error(err);
+      setScanStatus('Check failed: ' + err.message);
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const fetchCases = async () => {
     try {
@@ -44,10 +103,22 @@ export default function Home() {
     }
   };
 
-  const fetchAlerts = async () => {
+  const fetchAlerts = async (isFirstLoad = false) => {
     try {
       const data = await api.getAlerts();
       setAlerts(data);
+      
+      if (isFirstLoad) {
+        initialAlertIds.current = new Set(data.map(a => a.id));
+      } else if (initialAlertIds.current) {
+        const newAlerts = data.filter(a => !initialAlertIds.current.has(a.id));
+        newAlerts.forEach(a => {
+          addToast(a);
+          initialAlertIds.current.add(a.id);
+        });
+      } else {
+        initialAlertIds.current = new Set(data.map(a => a.id));
+      }
     } catch (err) {
       console.error('Error loading alerts for home:', err);
     }
@@ -284,6 +355,35 @@ export default function Home() {
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             {scanStatus && <span style={{ fontSize: '0.8rem', color: '#4b5563', fontStyle: 'italic', fontWeight: 500 }}>{scanStatus}</span>}
+            <button 
+              className="btn btn-secondary" 
+              onClick={handleCheckDueCases}
+              disabled={scanning}
+              style={{
+                background: 'linear-gradient(135deg, #ff9933 0%, #d97706 100%)',
+                borderColor: 'transparent',
+                color: '#fff',
+                boxShadow: '0 2px 4px rgba(217, 119, 6, 0.2)',
+                padding: '0.45rem 1rem',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                marginRight: '0.5rem'
+              }}
+            >
+              {scanning ? (
+                <>
+                  <div className="spinner-small" style={{ marginRight: '0.35rem', display: 'inline-block', width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spinner 0.6s linear infinite' }}></div>
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ marginRight: '0.2rem' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 15H19" />
+                  </svg>
+                  Sync Due Cases
+                </>
+              )}
+            </button>
             <button 
               className="btn btn-primary" 
               onClick={handleCheckAllCases}
@@ -680,6 +780,111 @@ export default function Home() {
             </button>
           </div>
         </div>
+      </div>
+      {/* Chrome-style stacked notifications popups container */}
+      <div className="toast-container" style={{
+        position: 'fixed',
+        bottom: '24px',
+        right: '24px',
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column-reverse', // Stack new ones on top
+        gap: '0.75rem',
+        maxWidth: '380px',
+        width: '100%',
+        pointerEvents: 'none'
+      }}>
+        <style>{`
+          @keyframes slideInRight {
+            from {
+              transform: translateX(120%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
+          }
+          @keyframes fadeOutRight {
+            from {
+              transform: scale(1);
+              opacity: 1;
+            }
+            to {
+              transform: scale(0.9);
+              opacity: 0;
+            }
+          }
+          .chrome-toast-card {
+            animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+        `}</style>
+
+        {toasts.map(toast => (
+           <div key={toast.id} className="chrome-toast-card" style={{
+             background: '#ffffff',
+             border: '1px solid #d1d5db',
+             borderLeft: '4px solid #ff9933',
+             borderRadius: '8px',
+             boxShadow: '0 10px 30px rgba(15, 44, 89, 0.12)',
+             padding: '1rem 1.25rem',
+             width: '350px',
+             display: 'flex',
+             flexDirection: 'column',
+             gap: '0.25rem',
+             pointerEvents: 'auto',
+             position: 'relative',
+             fontFamily: 'Outfit',
+             transition: 'all 0.2s ease-in-out'
+           }}>
+             {/* Tricolor top border decoration */}
+             <div style={{
+               position: 'absolute',
+               top: 0,
+               left: 0,
+               right: 0,
+               height: '3px',
+               background: 'linear-gradient(to right, #ff9933 33.3%, #ffffff 33.3%, #ffffff 66.6%, #128807 66.6%)',
+               borderRadius: '8px 8px 0 0'
+             }}></div>
+             
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '4px' }}>
+               <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#b45309', letterSpacing: '0.02em' }}>
+                 📢 प्रणाली अद्यतन / SYSTEM UPDATE
+               </span>
+               <button 
+                 onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+                 style={{
+                   background: 'none',
+                   border: 'none',
+                   color: '#9ca3af',
+                   cursor: 'pointer',
+                   fontSize: '1.2rem',
+                   fontWeight: 'bold',
+                   padding: 0,
+                   lineHeight: 1,
+                   marginTop: '-4px'
+                 }}
+                 onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                 onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
+               >
+                 &times;
+               </button>
+             </div>
+             
+             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f2c59', marginTop: '0.1rem' }}>
+               Case Reference: {toast.case_ref_no}
+             </div>
+             
+             <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#4b5563', lineHeight: '1.4' }}>
+               {toast.message}
+             </p>
+             
+             <span style={{ fontSize: '0.65rem', color: '#9ca3af', alignSelf: 'flex-end', marginTop: '4px' }}>
+               {new Date(toast.created_at || Date.now()).toLocaleTimeString()}
+             </span>
+           </div>
+         ))}
       </div>
     </div>
   );
