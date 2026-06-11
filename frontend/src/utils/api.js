@@ -127,6 +127,11 @@ export const api = {
   getDocumentsForCase: (caseId) => request(`/cases/${caseId}/documents`),
   getDocumentDownloadUrl: (docId) => `${API_BASE_URL}/documents/${docId}/download`,
 
+  // Pleadings
+  getPleadingsForCase: (caseId) => request(`/cases/${caseId}/pleadings`),
+  addPleading: (caseId, data) => request(`/cases/${caseId}/pleadings`, { method: 'POST', body: data }),
+  deletePleading: (id) => request(`/pleadings/${id}`, { method: 'DELETE' }),
+
   // Affidavits
   getAffidavitsForCase: (caseId) => request(`/cases/${caseId}/affidavits`),
   addAffidavitToCase: (caseId, data) => request(`/cases/${caseId}/affidavits`, { method: 'POST', body: data }),
@@ -188,6 +193,7 @@ export const api = {
   dismissAllAlerts: () => request('/alerts/read-all', { method: 'PUT' }),
   triggerCrawl: () => requestWithAi('/cases/trigger-crawl', { method: 'POST' }),
   checkDueCases: () => requestWithAi('/cases/check-due-cases', { method: 'POST' }),
+  smartSync: () => requestWithAi('/sync/smart', { method: 'POST' }),
 };
 
 export default api;

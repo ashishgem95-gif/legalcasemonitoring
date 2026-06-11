@@ -27,12 +27,7 @@ export default function HearingTimeline({ hearings = [] }) {
                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ color: '#0f2c59' }}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
-                {new Date(h.hearing_date).toLocaleDateString(undefined, { 
-                  weekday: 'short', 
-                  year: 'numeric', 
-                  month: 'short', 
-                  day: 'numeric' 
-                })}
+                {new Date(h.hearing_date).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).replace(/\//g, '-')}
               </div>
               <div style={{ marginTop: '0.5rem' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#ff9933', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>

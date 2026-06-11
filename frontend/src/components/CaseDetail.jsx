@@ -26,6 +26,7 @@ export default function CaseDetail() {
   const [hearings, setHearings] = useState([]);
   const [affidavits, setAffidavits] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const [pleadings, setPleadings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -152,6 +153,9 @@ export default function CaseDetail() {
 
       const docsData = await api.getDocumentsForCase(id);
       setDocuments(docsData || []);
+
+      const pleadingsData = await api.getPleadingsForCase(id);
+      setPleadings(pleadingsData || []);
 
       setError(null);
     } catch (err) {
@@ -625,6 +629,53 @@ export default function CaseDetail() {
               )}
             </div>
           )}
+
+          {/* Activity Timeline + Pleadings side-by-side */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', margin: '1.5rem 0' }}>
+            <div className="card" style={{ padding: '1rem' }}>
+              <strong style={{ fontSize: '0.9rem', color: '#0f2c59', display: 'block', marginBottom: '0.75rem' }}>Activity Timeline</strong>
+              <div style={{ position: 'relative', paddingLeft: '1rem', fontSize: '0.78rem' }}>
+                {[...(hearings || [])].sort((a,b) => new Date(b.hearing_date) - new Date(a.hearing_date)).slice(0, 8).map((h, i) => (
+                  <div key={i} style={{ position: 'relative', paddingBottom: '0.6rem', borderLeft: '2px solid #e5e7eb', paddingLeft: '0.75rem' }}>
+                    <div style={{ position: 'absolute', left: '-5px', top: '5px', width: '9px', height: '9px', borderRadius: '50%', background: '#0f2c59' }} />
+                    <span style={{ fontWeight: 600 }}>{new Date(h.hearing_date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}).replace(/\//g, '-')}</span>
+                    <span style={{ color: '#4b5563', display: 'block', marginTop: '0.1rem' }}>{(h.order_summary || '').substring(0, 120)}</span>
+                  </div>
+                ))}
+                {(!hearings || hearings.length === 0) && <span style={{ color: '#9ca3af' }}>No hearing records yet</span>}
+              </div>
+            </div>
+            <div className="card" style={{ padding: '1rem' }}>
+              <strong style={{ fontSize: '0.9rem', color: '#0f2c59', display: 'block', marginBottom: '0.75rem' }}>Pleadings Status</strong>
+              {[
+                { type: 'oa_copy', label: 'Petitioner Copy of OA', icon: '📄' },
+                { type: 'our_reply', label: 'Our Reply / Counter', icon: '📝' },
+                { type: 'rejoinder', label: 'Petitioner Rejoinder', icon: '📥' },
+                { type: 'reply_to_rejoinder', label: 'Our Reply to Rejoinder', icon: '📤' },
+              ].map(p => {
+                const existing = pleadings.find(pl => pl.type === p.type);
+                return (
+                  <div key={p.type} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.45rem 0', borderBottom: '1px solid #f0f0f0', fontSize: '0.8rem' }}>
+                    <span style={{ fontSize: '1rem' }}>{p.icon}</span>
+                    <span style={{ flex: 1, fontWeight: 600 }}>{p.label}</span>
+                    {existing ? (
+                      <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.78rem' }}>
+                        ✓ {existing.filing_date ? new Date(existing.filing_date).toLocaleDateString('en-GB').replace(/\//g, '-') : 'Filed'}
+                      </span>
+                    ) : (
+                      <button className="btn btn-sm" style={{ fontSize: '0.7rem', background: '#FFF7ED', color: '#D97706', border: '1px solid #FED7AA' }}
+                        onClick={async () => {
+                          const dt = prompt('Filing date (DD-MM-YYYY):', new Date().toISOString().split('T')[0]);
+                          if (dt) {
+                            try { const added = await api.addPleading(caseObj.id, { type: p.type, filing_date: dt, document_url: '' }); setPleadings(prev => [...prev, added]); } catch(e) {}
+                          }
+                        }}>+ Add</button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Timeline Section */}
           <div>

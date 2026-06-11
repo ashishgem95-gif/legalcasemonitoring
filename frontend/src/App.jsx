@@ -11,6 +11,60 @@ import Login from './components/Login';
 import api from './utils/api';
 
 
+function GearSettings() {
+  const [open, setOpen] = React.useState(false);
+  const [provider, setProvider] = React.useState(() => localStorage.getItem('ccms_provider') || 'gemini');
+  const [model, setModel] = React.useState(() => localStorage.getItem('ccms_model') || '');
+  const [apiKey, setApiKey] = React.useState(() => localStorage.getItem('ccms_apikey') || '');
+
+  const save = (p, m, k) => {
+    localStorage.setItem('ccms_provider', p);
+    localStorage.setItem('ccms_model', m);
+    localStorage.setItem('ccms_apikey', k);
+    setProvider(p); setModel(m); setApiKey(k);
+  };
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(!open)}
+        style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1, display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+        title="AI Model Settings">
+        <svg width="18" height="18" fill="none" stroke="#4b5563" strokeWidth="2" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', width: '300px', zIndex: 500, background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px', boxShadow: '0 12px 40px rgba(0,0,0,0.12)', padding: '1rem' }}>
+          <div className="flex-between" style={{ marginBottom: '0.75rem' }}>
+            <strong style={{ fontSize: '0.82rem' }}>AI Model Settings</strong>
+            <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#999' }}>&times;</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <div className="form-group">
+              <label className="form-label">Provider</label>
+              <select className="select-input" value={provider} onChange={e => save(e.target.value, model, apiKey)}>
+                <option value="gemini">Gemini (Google)</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="deepseek">DeepSeek</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Model</label>
+              <input className="form-control" placeholder="e.g. gemini-1.5-flash, gpt-4o, deepseek-chat" value={model} onChange={e => save(provider, e.target.value, apiKey)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">API Key</label>
+              <input className="form-control" type="password" placeholder="sk-..." value={apiKey} onChange={e => save(provider, model, e.target.value)} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DarkToggle() {
   const [dark, setDark] = React.useState(() => localStorage.getItem('theme') === 'dark');
   React.useEffect(() => {
@@ -48,9 +102,11 @@ function Header({ user, onLogout }) {
           </div>
         </div>
 
-        {/* Display Active User Badge on top-right of top bar */}
-        {user && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.5rem 0.85rem' }}>
+        {/* Right side: Settings + User */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <GearSettings />
+          {user && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.5rem 0.85rem' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: '1.2' }}>
               <span style={{ fontWeight: 800, color: '#0f2c59', fontSize: '0.825rem' }}>{user.name}</span>
               <span style={{ fontSize: '0.7rem', color: user.railwayScope === 'All' ? '#1e3a8a' : '#b45309', fontWeight: 700 }}>
@@ -79,6 +135,7 @@ function Header({ user, onLogout }) {
             </button>
           </div>
         )}
+        </div>
       </div>
 
       <div className="header-nav-bar">

@@ -104,15 +104,23 @@ router.post('/cases/:id/documents', upload.single('file'), uploadDocument);
 router.get('/cases/:id/documents', getDocuments);
 router.get('/documents/:id/download', downloadDocument);
 
+// ── Pleadings ──
+const { getPleadings, addPleading, updatePleading, deletePleading } = require('../controllers/pleadingController');
+router.get('/cases/:id/pleadings', getPleadings);
+router.post('/cases/:id/pleadings', addPleading);
+router.put('/pleadings/:id', updatePleading);
+router.delete('/pleadings/:id', deletePleading);
+
 // ── Audit Log ──
 const { getAuditLog } = require('../controllers/auditLogController');
 router.get('/audit-log', getAuditLog);
 
 // ── Batch Sync ──
-const { triggerBatchSync, triggerPlaywrightSync, triggerOrderSync, getSyncStatus } = require('../controllers/syncController');
+const { triggerBatchSync, triggerPlaywrightSync, triggerOrderSync, triggerSmartSync, getSyncStatus } = require('../controllers/syncController');
 router.post('/sync/start', triggerBatchSync);
 router.post('/sync/playwright', triggerPlaywrightSync);
 router.post('/sync/orders', triggerOrderSync);
+router.post('/sync/smart', triggerSmartSync);
 router.get('/sync/status', getSyncStatus);
 
 module.exports = router;

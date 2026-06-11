@@ -72,18 +72,18 @@ export default function Home() {
     }
   };
 
+  const [syncResult, setSyncResult] = useState(null);
+
   const handleCheckDueCases = async () => {
     try {
       setScanning(true);
-      setScanStatus('Initiating check for past-due court cases...');
-      await api.checkDueCases();
-      setScanStatus('Sync running in background...');
-      setTimeout(async () => {
-        await fetchAlerts();
-        await fetchCases();
-        setScanStatus('Due cases synchronization complete!');
-        setTimeout(() => setScanStatus(''), 4000);
-      }, 5000);
+      setScanStatus('Checking past-due cases on court website...');
+      const res = await api.smartSync();
+      setSyncResult(res);
+      await fetchAlerts();
+      await fetchCases();
+      setScanStatus(res.updated > 0 ? `Updated ${res.updated} cases, ${res.unchanged} still pending` : `All ${res.unchanged} past-due cases awaiting court updates`);
+      setTimeout(() => setScanStatus(''), 6000);
     } catch (err) {
       console.error(err);
       setScanStatus('Check failed: ' + err.message);
@@ -121,23 +121,6 @@ export default function Home() {
       }
     } catch (err) {
       console.error('Error loading alerts for home:', err);
-    }
-  };
-
-  const handleCheckAllCases = async () => {
-    try {
-      setScanning(true);
-      setScanStatus('Checking all court links for updates...');
-      const res = await api.triggerCrawl();
-      setScanStatus(`Scanned cases! Found ${res.alertsCreated} updates.`);
-      await fetchAlerts();
-      await fetchCases();
-      setTimeout(() => setScanStatus(''), 6000);
-    } catch (err) {
-      console.error(err);
-      setScanStatus('Check failed: ' + err.message);
-    } finally {
-      setScanning(false);
     }
   };
 
@@ -399,33 +382,6 @@ export default function Home() {
                 </>
               )}
             </button>
-            <button 
-              className="btn btn-primary" 
-              onClick={handleCheckAllCases}
-              disabled={scanning}
-              style={{
-                background: 'linear-gradient(135deg, #1e3a8a 0%, #0f2c59 100%)',
-                borderColor: 'transparent',
-                boxShadow: '0 2px 4px rgba(15, 44, 89, 0.2)',
-                padding: '0.45rem 1rem',
-                fontSize: '0.8rem',
-                fontWeight: 700
-              }}
-            >
-              {scanning ? (
-                <>
-                  <div className="spinner-small" style={{ marginRight: '0.35rem', display: 'inline-block', width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spinner 0.6s linear infinite' }}></div>
-                  Scanning...
-                </>
-              ) : (
-                <>
-                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ marginRight: '0.2rem' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 15H19" />
-                  </svg>
-                  Check All Cases
-                </>
-              )}
-            </button>
           </div>
         </div>
 
@@ -517,6 +473,53 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Disposal Rate Mini Chart */}
+      <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem 1.25rem' }}>
+        <div className="flex-between mb-1">
+          <strong style={{ fontSize: '0.85rem', color: '#0f2c59' }}>Case Disposal Overview</strong>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'end', gap: '0.5rem', height: '80px' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'end' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700 }}>{activeCases}</span>
+            <div style={{ width: '100%', height: `${Math.max(8, (activeCases/totalCases)*70)}px`, background: '#D97706', borderRadius: '4px 4px 0 0', minHeight: '8px' }} />
+            <span style={{ fontSize: '0.6rem', color: '#6b7280', marginTop: '0.2rem' }}>Active</span>
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'end' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700 }}>{disposedCases}</span>
+            <div style={{ width: '100%', height: `${Math.max(8, (disposedCases/totalCases)*70)}px`, background: '#059669', borderRadius: '4px 4px 0 0', minHeight: '8px' }} />
+            <span style={{ fontSize: '0.6rem', color: '#6b7280', marginTop: '0.2rem' }}>Disposed</span>
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'end' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700 }}>{totalCases - activeCases - disposedCases}</span>
+            <div style={{ width: '100%', height: `${Math.max(8, ((totalCases - activeCases - disposedCases)/totalCases)*70)}px`, background: '#6b7280', borderRadius: '4px 4px 0 0', minHeight: '8px' }} />
+            <span style={{ fontSize: '0.6rem', color: '#6b7280', marginTop: '0.2rem' }}>Other</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Filter Chips */}
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+        {[{ label: 'Overdue', status: 'urgent', color: '#DC2626' },
+          { label: 'My Zone', scope: true, color: '#0f2c59' },
+          { label: 'This Week', days: 7, color: '#D97706' },
+          { label: 'CAT Only', forum: 'CAT', color: '#059669' },
+          { label: 'Disposed', status: 'disposed', color: '#059669' },
+        ].map(chip => (
+          <button key={chip.label} className="btn btn-secondary btn-sm"
+            onClick={() => {
+              if (chip.scope) {
+                const u = JSON.parse(localStorage.getItem('user') || '{}');
+                if (u.railwayScope) navigate(`/cases?railway=${u.railwayScope}`);
+              } else if (chip.status) navigate(`/cases?status=${chip.status}`);
+              else if (chip.forum) navigate('/cases');
+              else if (chip.days) navigate('/cases');
+            }}
+            style={{ borderColor: chip.color, color: chip.color, fontWeight: 600 }}>
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
       {/* Layout Split: Notices vs. Quick Navigation */}
       <div className="case-details-layout" style={{ gap: '2rem' }}>
         {/* Listed Hearings Board */}
@@ -556,7 +559,21 @@ export default function Home() {
                   >
                     Listed Today ({todayCases.length})
                   </button>
-                  <button 
+                  {todayCases.length > 0 && (
+                    <button className="btn btn-secondary btn-sm" style={{ marginLeft: 'auto' }}
+                      onClick={() => {
+                        const lines = [`📋 *Today's Cases — ${new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'})}*`, ''];
+                        todayCases.forEach(c => {
+                          lines.push(`• ${c.case_ref_no}`);
+                          if (c.applicant) lines.push(`  Petitioner: ${c.applicant}`);
+                          lines.push('');
+                        });
+                        navigator.clipboard.writeText(lines.join('\n'));
+                      }}>
+                      📋 Copy
+                    </button>
+                  )}
+                  <button
                     style={{
                       padding: '0.6rem 1.25rem',
                       fontWeight: 700,
@@ -589,7 +606,7 @@ export default function Home() {
                       </div>
                     ) : (
                       todayCases.map(c => {
-                        const courtInfo = getCourtWebsite(c.forum);
+                        const courtInfo = c.court_link ? { name: 'View Case on Court Website', url: c.court_link } : getCourtWebsite(c.forum);
                         return (
                           <div key={c.id} style={{
                             background: '#ffffff',
@@ -676,7 +693,7 @@ export default function Home() {
                       </div>
                     ) : (
                       thisWeekCases.map(c => {
-                        const courtInfo = getCourtWebsite(c.forum);
+                        const courtInfo = c.court_link ? { name: 'View Case on Court Website', url: c.court_link } : getCourtWebsite(c.forum);
                         return (
                           <div key={c.id} style={{
                             background: '#ffffff',
@@ -800,6 +817,81 @@ export default function Home() {
           </div>
         </div>
       </div>
+      {/* Sync Results Modal */}
+      {syncResult && (
+        <div className="modal-overlay" onClick={() => setSyncResult(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '550px' }}>
+            <div className="modal-header">
+              <span>Smart Sync Results</span>
+              <button className="modal-close-btn" onClick={() => setSyncResult(null)}>&times;</button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+                <div className="kpi-card" style={{ padding: '0.65rem', textAlign: 'center' }}>
+                  <span className="kpi-label" style={{ color: '#059669' }}>Updated</span>
+                  <span className="kpi-value" style={{ fontSize: '1.5rem', color: '#059669' }}>{syncResult.updated}</span>
+                </div>
+                <div className="kpi-card" style={{ padding: '0.65rem', textAlign: 'center' }}>
+                  <span className="kpi-label" style={{ color: '#D97706' }}>Still Pending</span>
+                  <span className="kpi-value" style={{ fontSize: '1.5rem', color: '#D97706' }}>{syncResult.unchanged}</span>
+                </div>
+                <div className="kpi-card" style={{ padding: '0.65rem', textAlign: 'center' }}>
+                  <span className="kpi-label" style={{ color: '#DC2626' }}>Errors</span>
+                  <span className="kpi-value" style={{ fontSize: '1.5rem', color: '#DC2626' }}>{syncResult.errors}</span>
+                </div>
+              </div>
+
+              {syncResult.detail?.pending?.length > 0 && (
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <strong style={{ fontSize: '0.8rem', color: '#D97706' }}>Still awaiting court orders ({syncResult.detail.pending.length} cases):</strong>
+                  <div style={{ maxHeight: '200px', overflowY: 'auto', marginTop: '0.35rem' }}>
+                    {syncResult.detail.pending.map((c, i) => (
+                      <div key={i} style={{ padding: '0.3rem 0', fontSize: '0.72rem', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>
+                          <a href="#" onClick={e => { e.preventDefault(); navigate(`/cases/${c.caseId}`); setSyncResult(null); }} style={{ fontWeight: 700, color: '#0f2c59', textDecoration: 'underline' }}>{c.caseRefNo}</a>
+                          {c.petitioner && c.petitioner !== 'Unknown Petitioner' && <span style={{ color: '#6b7280' }}> — {c.petitioner.substring(0, 40)}</span>}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {syncResult.detail?.updated?.length > 0 && (
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <strong style={{ fontSize: '0.8rem', color: '#059669' }}>Updated cases ({syncResult.detail.updated.length}):</strong>
+                  <div style={{ maxHeight: '150px', overflowY: 'auto', marginTop: '0.35rem' }}>
+                    {syncResult.detail.updated.map((c, i) => (
+                      <div key={i} style={{ padding: '0.3rem 0', fontSize: '0.72rem', borderBottom: '1px solid #f0f0f0' }}>
+                        <a href="#" onClick={e => { e.preventDefault(); navigate(`/cases/${c.caseId}`); setSyncResult(null); }} style={{ fontWeight: 700, color: '#0f2c59', textDecoration: 'underline' }}>{c.caseRefNo}</a>
+                        {c.petitioner && c.petitioner !== 'Unknown Petitioner' && <span style={{ color: '#6b7280' }}> — {c.petitioner.substring(0, 40)}</span>}
+                        <span style={{ color: '#059669', marginLeft: '0.5rem' }}>({c.hearingsAdded}h, {c.pdfsAdded} PDFs{c.newNextDate ? ', Next: ' + c.newNextDate : ''})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {syncResult.detail?.errors?.length > 0 && (
+                <div>
+                  <strong style={{ fontSize: '0.8rem', color: '#DC2626' }}>Errors:</strong>
+                  {syncResult.detail.errors.map((c, i) => (
+                    <div key={i} style={{ padding: '0.25rem 0', fontSize: '0.7rem', color: '#DC2626' }}>
+                      <a href="#" onClick={e => { e.preventDefault(); navigate(`/cases/${c.caseId}`); setSyncResult(null); }} style={{ fontWeight: 600, color: '#DC2626' }}>{c.caseRefNo || 'Unknown'}</a>
+                      {c.petitioner && <span> — {c.petitioner.substring(0, 40)}</span>}
+                      <span> — {c.error}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={() => setSyncResult(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Chrome-style stacked notifications popups container */}
       <div className="toast-container" style={{
         position: 'fixed',

@@ -446,13 +446,24 @@ export default function CaseList() {
                                 </td>
                               );
                             case 'nextHearing':
+                              const nextDate = c.next_hearing_date ? new Date(c.next_hearing_date) : null;
+                              const today = new Date(); today.setHours(0,0,0,0);
+                              let urgency = 'none', urgencyColor = '#9ca3af';
+                              if (nextDate && getStatusClass(c.present_status) !== 'disposed') {
+                                const daysLeft = Math.ceil((nextDate - today) / 86400000);
+                                if (daysLeft < 0) { urgency = 'overdue'; urgencyColor = '#DC2626'; }
+                                else if (daysLeft <= 3) { urgency = 'critical'; urgencyColor = '#DC2626'; }
+                                else if (daysLeft <= 7) { urgency = 'soon'; urgencyColor = '#D97706'; }
+                                else { urgency = 'upcoming'; urgencyColor = '#059669'; }
+                              }
                               return (
-                                <td key="nextHearing" style={{ fontSize: '0.85rem', fontWeight: 700, color: c.next_hearing_date && new Date(c.next_hearing_date) < new Date() ? '#DC2626' : '#0f2c59' }}>
-                                  {c.next_hearing_date ? (
-                                    new Date(c.next_hearing_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                                  ) : (
-                                    <span style={{ color: '#9ca3af' }}>-</span>
-                                  )}
+                                <td key="nextHearing" style={{ fontSize: '0.85rem', fontWeight: 700 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                    {urgency !== 'none' && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: urgencyColor, flexShrink: 0 }} title={urgency} />}
+                                    <span style={{ color: urgencyColor === '#9ca3af' ? '#9ca3af' : urgencyColor }}>
+                                      {c.next_hearing_date ? nextDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                                    </span>
+                                  </div>
                                 </td>
                               );
                             case 'status':

@@ -1258,3 +1258,59 @@ a:hover {
   outline: none;
 }
 
+
+/* AI Settings gear in nav */
+.ai-settings-nav > div {
+  position: absolute; top: 100%; right: 0; margin-top: 6px;
+  width: 340px; z-index: 500; background: var(--card-bg);
+  border: 1px solid var(--border-color); border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15); padding: 1rem;
+}
+[data-theme="dark"] .ai-settings-nav > div { background: var(--card-bg); border-color: var(--border-color); }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 768px) {
+  .header-top-bar { flex-wrap: wrap; padding: 0.3rem 0.6rem; }
+  .header-logo-section { gap: 0.5rem; }
+  .portal-title { font-size: 0.8rem; }
+  .portal-title-en { font-size: 0.6rem; }
+  .header-nav-content { padding: 0 0.5rem; height: 34px; }
+  .nav-link { font-size: 0.65rem; padding: 0 0.4rem; }
+  .main-content { padding: 0.6rem; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.4rem; }
+  .kpi-card { padding: 0.6rem; }
+  .kpi-value { font-size: 1.25rem; }
+  .case-details-layout { grid-template-columns: 1fr; }
+  .detail-layout { grid-template-columns: 1fr; }
+  .detail-header { flex-direction: column; }
+  .meta-grid { grid-template-columns: repeat(2, 1fr); }
+  .form-grid { grid-template-columns: 1fr; }
+  .cases-table { font-size: 0.65rem; }
+  .cases-table th { font-size: 0.58rem; padding: 0.2rem 0.3rem; }
+  .cases-table td { padding: 0.15rem 0.3rem; font-size: 0.62rem; }
+  .table-wrap { overflow-x: auto; }
+  .sidebar { width: 60px; }
+  .sidebar-brand h1 { font-size: 0.7rem; }
+  .sidebar-nav .nav-item { font-size: 0; padding: 0.4rem; justify-content: center; }
+  .sidebar-nav .nav-item svg { margin: 0; }
+  .main-area { margin-left: 60px; }
+}
+
+/* ── Print-Friendly ── */
+@media print {
+  .app-header, .header-nav-bar, .sidebar, .goi-footer, .btn,
+  .modal-overlay, .toast-container, .nav-actions { display: none !important; }
+  .main-content { padding: 0; margin: 0; max-width: 100%; }
+  .card, .glass-panel { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+  body { background: #fff; font-size: 12px; }
+}
+
+/* ── Case Tags ── */
+.case-tags { display: flex; gap: 0.25rem; flex-wrap: wrap; margin-top: 0.25rem; }
+.case-tag { 
+  display: inline-flex; align-items: center; gap: 0.15rem; padding: 0.1rem 0.35rem; border-radius: 3px;
+  font-size: 0.58rem; font-weight: 600; background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE;
+  cursor: pointer;
+}
+.case-tag:hover { background: #DBEAFE; }
+[data-theme="dark"] .case-tag { background: #1E3A5F; color: #93C5FD; border-color: #1E40AF; }
