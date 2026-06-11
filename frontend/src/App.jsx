@@ -11,6 +11,19 @@ import Login from './components/Login';
 import api from './utils/api';
 
 
+function DarkToggle() {
+  const [dark, setDark] = React.useState(() => localStorage.getItem('theme') === 'dark');
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
+  }, [dark]);
+  return (
+    <button onClick={() => setDark(!dark)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '5px', padding: '0.2rem 0.35rem', cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1, marginRight: '0.5rem' }} title={dark ? 'Light mode' : 'Dark mode'}>
+      {dark ? '☀️' : '🌙'}
+    </button>
+  );
+}
+
 function Header({ user, onLogout }) {
   const location = useLocation();
   
@@ -106,6 +119,7 @@ function Header({ user, onLogout }) {
           </nav>
           
           <div className="nav-actions">
+            <DarkToggle />
             <Link to="/cases/new" className="btn btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ marginRight: '0.25rem' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

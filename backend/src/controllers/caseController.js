@@ -6,7 +6,7 @@ const getCases = async (req, res) => {
     const { search, status, case_type, railway } = req.query;
     let query = `
       SELECT c.*,
-             (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id) AS next_hearing_date
+             COALESCE(c.next_hearing_date, (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id)) AS next_hearing_date
       FROM cases c
       WHERE 1=1
     `;

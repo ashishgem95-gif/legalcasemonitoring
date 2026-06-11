@@ -167,6 +167,7 @@ export default function Home() {
   const activeCases = totalCases - disposedCases;
   const upcomingHearings = cases.filter(c => {
     if (!c.next_hearing_date) return false;
+    if (getStatusClass(c.present_status) === 'disposed') return false;
     const hearingDate = parseLocalDate(c.next_hearing_date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -215,6 +216,7 @@ export default function Home() {
 
     cases.forEach(c => {
       if (!c.next_hearing_date) return;
+      if (getStatusClass(c.present_status) === 'disposed') return;
       const hDate = parseLocalDate(c.next_hearing_date);
       if (!hDate) return;
 

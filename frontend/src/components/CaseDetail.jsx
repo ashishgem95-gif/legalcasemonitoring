@@ -79,6 +79,7 @@ export default function CaseDetail() {
   };
 
   const [isAddHearingOpen, setIsAddHearingOpen] = useState(false);
+  const [hearingSortAsc, setHearingSortAsc] = useState(false);
   const [isAddAffidavitOpen, setIsAddAffidavitOpen] = useState(false);
   const [affidavitSubmitting, setAffidavitSubmitting] = useState(false);
   const [affidavitError, setAffidavitError] = useState(null);
@@ -629,15 +630,24 @@ export default function CaseDetail() {
           <div>
             <div className="timeline-section-header" style={{ borderBottom: '2px solid #0f2c59', marginTop: '1rem' }}>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f2c59', margin: 0 }}>सुनवाई इतिहास लॉग / Chronological Hearing Timeline</h2>
-              <button className="btn btn-primary" onClick={() => setIsAddHearingOpen(true)}>
-                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
-                </svg>
-                Record New Hearing
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="btn btn-secondary btn-sm" onClick={() => setHearingSortAsc(!hearingSortAsc)}>
+                  {hearingSortAsc ? '↑ Oldest First' : '↓ Newest First'}
+                </button>
+                <button className="btn btn-primary" onClick={() => setIsAddHearingOpen(true)}>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  Record New Hearing
+                </button>
+              </div>
             </div>
-            
-            <HearingTimeline hearings={hearings} />
+
+            <HearingTimeline hearings={
+              hearingSortAsc
+                ? [...hearings].sort((a, b) => new Date(a.hearing_date) - new Date(b.hearing_date))
+                : [...hearings].sort((a, b) => new Date(b.hearing_date) - new Date(a.hearing_date))
+            } />
           </div>
         </div>
 

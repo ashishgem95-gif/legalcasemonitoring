@@ -15,6 +15,7 @@ const DEFAULT_COLUMNS = [
   { id: 'fileNo', label: 'File No.' },
   { id: 'replyFiled', label: 'Reply Filed' },
   { id: 'doh', label: 'DOH' },
+  { id: 'nextHearing', label: 'Next Hearing' },
   { id: 'status', label: 'Status' },
   { id: 'linkFileNo', label: 'Link File No.' },
   { id: 'courtLink', label: 'Updates Link', minWidth: '150px' }
@@ -100,6 +101,10 @@ export default function CaseList() {
   const [selectedYear, setSelectedYear] = useState('All');
   const [selectedRailway, setSelectedRailway] = useState('All');
 
+  // Sort state
+  const [sortCol, setSortCol] = useState(null);
+  const [sortAsc, setSortAsc] = useState(true);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
@@ -170,8 +175,19 @@ export default function CaseList() {
     return matchesSearch && matchesStatus && matchesForum && matchesYear && matchesRailway;
   });
 
+  // Sort
+  const colToField = { year: 'case_year', caseNumber: 'case_number', caseType: 'case_type', railway: 'railway', forum: 'forum', status: 'present_status', doh: 'next_hearing_date', nextHearing: 'next_hearing_date', replyFiled: 'date_filing_reply', fileNo: 'file_no', designation: 'employee_designation' };
+  const sortedCases = sortCol ? [...filteredCases].sort((a, b) => {
+    const field = colToField[sortCol] || sortCol;
+    const va = a[field] || '', vb = b[field] || '';
+    if (field === 'next_hearing_date' || field === 'date_filing_reply') {
+      return sortAsc ? new Date(va) - new Date(vb) : new Date(vb) - new Date(va);
+    }
+    return sortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+  }) : filteredCases;
+
   // Pagination Logic
-  const totalFiltered = filteredCases.length;
+  const totalFiltered = sortedCases.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / itemsPerPage));
   
   useEffect(() => {
@@ -180,7 +196,7 @@ export default function CaseList() {
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredCases.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = sortedCases.slice(indexOfFirstItem, indexOfLastItem);
 
   return (
     <div>
@@ -316,15 +332,19 @@ export default function CaseList() {
                         onDrop={(e) => handleDrop(e, col.id)}
                         className={`draggable-th ${draggedColumnId === col.id ? 'dragging' : ''} ${dragOverColumnId === col.id ? 'drag-over' : ''}`}
                         style={{
-                          color: '#4b5563',
+                          color: '#4b5563', cursor: 'pointer',
                           padding: col.id === 'sno' ? '0.75rem 0.5rem' : '0.75rem 1rem',
                           minWidth: col.minWidth || 'auto',
                           textAlign: col.id === 'sno' ? 'center' : 'left'
                         }}
-                        title="Drag to reorder column"
+                        title="Click to sort · Drag to reorder"
+                        onClick={() => {
+                          if (sortCol === col.id) setSortAsc(!sortAsc);
+                          else { setSortCol(col.id); setSortAsc(true); }
+                        }}
                       >
                         <span className="drag-handle-dots">⋮⋮</span>
-                        {col.label}
+                        {col.label}{sortCol === col.id ? (sortAsc ? ' ↑' : ' ↓') : ''}
                       </th>
                     ))}
                   </tr>
@@ -420,6 +440,16 @@ export default function CaseList() {
                                 <td key="doh" style={{ fontSize: '0.85rem', fontWeight: 600 }}>
                                   {c.next_hearing_date ? (
                                     new Date(c.next_hearing_date).toLocaleDateString()
+                                  ) : (
+                                    <span style={{ color: '#9ca3af' }}>-</span>
+                                  )}
+                                </td>
+                              );
+                            case 'nextHearing':
+                              return (
+                                <td key="nextHearing" style={{ fontSize: '0.85rem', fontWeight: 700, color: c.next_hearing_date && new Date(c.next_hearing_date) < new Date() ? '#DC2626' : '#0f2c59' }}>
+                                  {c.next_hearing_date ? (
+                                    new Date(c.next_hearing_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                                   ) : (
                                     <span style={{ color: '#9ca3af' }}>-</span>
                                   )}
