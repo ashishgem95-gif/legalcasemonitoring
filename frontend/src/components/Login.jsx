@@ -1,43 +1,12 @@
 import React, { useState } from 'react';
 import api from '../utils/api';
 
-const MOCK_USERS = [
-  {
-    id: 'admin',
-    name: 'Ashish Sodhi',
-    email: 'admin@rb.gov.in',
-    password: 'abcd1234',
-    role: 'Super Admin / Central Legal Cell',
-    railwayScope: 'All',
-    desc: 'Complete global monitoring access to all cases across all 17 Zonal Railways and Divisions.'
-  },
-  {
-    id: 'dircc',
-    name: 'Gomathi Shankar',
-    email: 'dir@rb.gov.in',
-    password: 'password',
-    role: 'Nodal Officer (Northern Railway - NR)',
-    railwayScope: 'NR',
-    desc: 'Restricted view. Only displays and manages cases originating from the Northern Railway Zone.'
-  },
-  {
-    id: 'aso1cc',
-    name: 'Avinash',
-    email: 'aso@rb.gov.in',
-    password: 'password',
-    role: 'Nodal Officer (Eastern Railway - ER)',
-    railwayScope: 'ER',
-    desc: 'Restricted view. Only displays and manages cases originating from the Eastern Railway Zone.'
-  },
-  {
-    id: 'aso2cc',
-    name: 'Aakash',
-    email: 'wr_nodal@railways.gov.in',
-    password: 'password',
-    role: 'Nodal Officer (Western Railway - WR)',
-    railwayScope: 'WR',
-    desc: 'Restricted view. Only displays and manages cases originating from the Western Railway Zone.'
-  }
+// Available demo accounts for quick login reference (passwords are server-side only)
+const DEMO_USERS = [
+  { id: 'admin',          name: 'Shri R. K. Singh',     label: 'Super Admin' },
+  { id: 'nr_nodal',       name: 'Smt. Anjali Sharma',    label: 'Northern Railway (NR)' },
+  { id: 'er_nodal',       name: 'Shri Manoj Mukherjee',  label: 'Eastern Railway (ER)' },
+  { id: 'wr_nodal',       name: 'Shri Vikram Mehta',     label: 'Western Railway (WR)' },
 ];
 
 export default function Login({ onLogin }) {
@@ -62,16 +31,13 @@ export default function Login({ onLogin }) {
   const handleQuickLogin = async (user) => {
     setError(null);
     try {
-      // Find the user's password from MOCK_USERS
-      const mockUser = MOCK_USERS.find(u => u.id === user.id);
-      const pass = mockUser ? mockUser.password : 'password';
-
-      const response = await api.login(user.id, pass);
+      // Quick-login uses user ID as both email and password for demo purposes
+      const response = await api.login(user.id, 'password');
       localStorage.setItem('user', JSON.stringify(response.user));
       localStorage.setItem('ccms_token', response.token);
       onLogin(response.user);
     } catch (err) {
-      setError(err.message || 'Quick login failed.');
+      setError(err.message || 'Quick login failed. Try entering credentials manually.');
     }
   };
 

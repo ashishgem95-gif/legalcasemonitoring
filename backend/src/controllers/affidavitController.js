@@ -1,43 +1,16 @@
-const db = require('../config/database');
+const { run, get, all } = require('../config/dbHelper');
 
-// Promise-based wrappers for sqlite3
-const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
-  db.all(sql, params, (err, rows) => {
-    if (err) return reject(err);
-    resolve(rows);
-  });
-});
-
-const dbGet = (sql, params = []) => new Promise((resolve, reject) => {
-  db.get(sql, params, (err, row) => {
-    if (err) return reject(err);
-    resolve(row);
-  });
-});
-
-const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
-  db.run(sql, params, function(err) {
-    if (err) return reject(err);
-    resolve({ id: this.lastID, changes: this.changes });
-  });
-});
-
-// GET /api/cases/:id/affidavits - Get all affidavits for a case
+// GET /api/cases/:id/affidavits
 const getAffidavitsForCase = async (req, res) => {
   try {
-    const caseId = req.params.id;
-
-    // Check if case exists first
-    const caseRecord = await dbGet('SELECT id FROM cases WHERE id = ?', [caseId]);
+    const caseRecord = get('SELECT id FROM cases WHERE id = ?', [req.params.id]);
     if (!caseRecord) {
       return res.status(404).json({ error: 'Case not found.' });
     }
-
-    const affidavits = await dbAll(
+    const affidavits = all(
       'SELECT * FROM case_affidavits WHERE case_id = ? ORDER BY filing_date DESC, id DESC',
-      [caseId]
+      [req.params.id]
     );
-
     res.json(affidavits);
   } catch (err) {
     console.error('Error fetching affidavits:', err);
@@ -45,7 +18,7 @@ const getAffidavitsForCase = async (req, res) => {
   }
 };
 
-// POST /api/cases/:id/affidavits - Add a new affidavit to a case
+// POST /api/cases/:id/affidavits
 const addAffidavitToCase = async (req, res) => {
   try {
     const caseId = req.params.id;
@@ -59,20 +32,16 @@ const addAffidavitToCase = async (req, res) => {
       return res.status(400).json({ error: 'filed_by must be either "Petitioner" or "Respondent".' });
     }
 
-    // Check if case exists first
-    const caseRecord = await dbGet('SELECT id FROM cases WHERE id = ?', [caseId]);
+    const caseRecord = get('SELECT id FROM cases WHERE id = ?', [caseId]);
     if (!caseRecord) {
       return res.status(404).json({ error: 'Case not found.' });
     }
 
-    const sql = `
-      INSERT INTO case_affidavits (case_id, filing_date, filed_by, affidavit_type, notes)
-      VALUES (?, ?, ?, ?, ?)
-    `;
-
-    const result = await dbRun(sql, [caseId, filing_date, filed_by, affidavit_type, notes || '']);
-    const newAffidavit = await dbGet('SELECT * FROM case_affidavits WHERE id = ?', [result.id]);
-
+    const result = run(
+      'INSERT INTO case_affidavits (case_id, filing_date, filed_by, affidavit_type, notes) VALUES (?, ?, ?, ?, ?)',
+      [caseId, filing_date, filed_by, affidavit_type, notes || '']
+    );
+    const newAffidavit = get('SELECT * FROM case_affidavits WHERE id = ?', [result.id]);
     res.status(201).json(newAffidavit);
   } catch (err) {
     console.error('Error adding affidavit:', err);
@@ -80,18 +49,14 @@ const addAffidavitToCase = async (req, res) => {
   }
 };
 
-// DELETE /api/affidavits/:id - Delete an affidavit record
+// DELETE /api/affidavits/:id
 const deleteAffidavit = async (req, res) => {
   try {
-    const affidavitId = req.params.id;
-
-    // Check if it exists
-    const existing = await dbGet('SELECT id FROM case_affidavits WHERE id = ?', [affidavitId]);
+    const existing = get('SELECT id FROM case_affidavits WHERE id = ?', [req.params.id]);
     if (!existing) {
       return res.status(404).json({ error: 'Affidavit record not found.' });
     }
-
-    await dbRun('DELETE FROM case_affidavits WHERE id = ?', [affidavitId]);
+    run('DELETE FROM case_affidavits WHERE id = ?', [req.params.id]);
     res.json({ message: 'Affidavit record successfully deleted.' });
   } catch (err) {
     console.error('Error deleting affidavit:', err);
@@ -99,8 +64,4 @@ const deleteAffidavit = async (req, res) => {
   }
 };
 
-module.exports = {
-  getAffidavitsForCase,
-  addAffidavitToCase,
-  deleteAffidavit
-};
+module.exports = { getAffidavitsForCase, addAffidavitToCase, deleteAffidavit };

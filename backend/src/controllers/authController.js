@@ -1,5 +1,9 @@
-const db = require('../config/database');
+const { run, get, all } = require('../config/dbHelper');
+const { PASSWORD_ITERATIONS } = require('../config/database');
 const crypto = require('crypto');
+
+// Legacy iteration count for migration — existing passwords used 1000 iterations
+const LEGACY_ITERATIONS = 1000;
 
 function login(req, res) {
   const { email, password } = req.body;
@@ -8,57 +12,59 @@ function login(req, res) {
     return res.status(400).json({ error: 'ईमेल और पासवर्ड आवश्यक हैं। / Email and password are required.' });
   }
 
-  db.get(
-    'SELECT * FROM users WHERE email = ? OR id = ?',
-    [email.toLowerCase().trim(), email.toLowerCase().trim()],
-    (err, user) => {
-      if (err) {
-        console.error('Database error in login:', err);
-        return res.status(500).json({ error: 'डेटाबेस त्रुटि / Database error during login.' });
-      }
+  try {
+    const user = get(
+      'SELECT * FROM users WHERE email = ? OR id = ?',
+      [email.toLowerCase().trim(), email.toLowerCase().trim()]
+    );
 
-      if (!user) {
-        return res.status(401).json({ error: 'अमान्य क्रेडेंशियल! / Invalid Credentials! Please use correct email and password.' });
-      }
-
-      // Hash provided password using user's salt
-      const hash = crypto.pbkdf2Sync(password, user.salt, 1000, 64, 'sha512').toString('hex');
-
-      if (hash !== user.password_hash) {
-        return res.status(401).json({ error: 'अमान्य क्रेडेंशियल! / Invalid Credentials! Please use correct email and password.' });
-      }
-
-      // Create session
-      const token = crypto.randomBytes(32).toString('hex');
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24); // 24-hour expiration
-      const expiresAtStr = expiresAt.toISOString();
-
-      db.run(
-        'INSERT INTO user_sessions (token, user_id, expires_at) VALUES (?, ?, ?)',
-        [token, user.id, expiresAtStr],
-        (sessionErr) => {
-          if (sessionErr) {
-            console.error('Failed to create session:', sessionErr);
-            return res.status(500).json({ error: 'सत्र निर्माण विफल / Failed to create session.' });
-          }
-
-          // Return token and user details (excluding sensitive columns)
-          res.json({
-            token,
-            user: {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              role: user.role,
-              railwayScope: user.railway_scope,
-              desc: user.desc
-            }
-          });
-        }
-      );
+    if (!user) {
+      return res.status(401).json({ error: 'अमान्य क्रेडेंशियल! / Invalid Credentials!' });
     }
-  );
+
+    const iterations = user.password_iterations || LEGACY_ITERATIONS;
+    const hash = crypto.pbkdf2Sync(password, user.salt, iterations, 64, 'sha512').toString('hex');
+
+    if (hash !== user.password_hash) {
+      return res.status(401).json({ error: 'अमान्य क्रेडेंशियल! / Invalid Credentials!' });
+    }
+
+    // Re-hash with stronger iterations if user was created with legacy count
+    if (iterations < PASSWORD_ITERATIONS) {
+      const newSalt = crypto.randomBytes(16).toString('hex');
+      const newHash = crypto.pbkdf2Sync(password, newSalt, PASSWORD_ITERATIONS, 64, 'sha512').toString('hex');
+      run(
+        'UPDATE users SET password_hash = ?, salt = ?, password_iterations = ? WHERE id = ?',
+        [newHash, newSalt, PASSWORD_ITERATIONS, user.id]
+      );
+      console.log(`Upgraded password hash for user ${user.id} to ${PASSWORD_ITERATIONS} iterations.`);
+    }
+
+    // Create session
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
+
+    run(
+      'INSERT INTO user_sessions (token, user_id, expires_at) VALUES (?, ?, ?)',
+      [token, user.id, expiresAt.toISOString()]
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        railwayScope: user.railway_scope,
+        desc: user.desc
+      }
+    });
+  } catch (err) {
+    console.error('Database error in login:', err);
+    return res.status(500).json({ error: 'डेटाबेस त्रुटि / Database error during login.' });
+  }
 }
 
 function logout(req, res) {
@@ -69,21 +75,13 @@ function logout(req, res) {
     return res.status(200).json({ message: 'सफलतापूर्वक लॉगआउट किया गया। / Successfully logged out.' });
   }
 
-  db.run(
-    'DELETE FROM user_sessions WHERE token = ?',
-    [token],
-    (err) => {
-      if (err) {
-        console.error('Database error in logout:', err);
-        return res.status(500).json({ error: 'लॉगआउट विफल / Failed to revoke session during logout.' });
-      }
-
-      res.json({ message: 'सफलतापूर्वक लॉगआउट किया गया। / Successfully logged out.' });
-    }
-  );
+  try {
+    run('DELETE FROM user_sessions WHERE token = ?', [token]);
+    res.json({ message: 'सफलतापूर्वक लॉगआउट किया गया। / Successfully logged out.' });
+  } catch (err) {
+    console.error('Database error in logout:', err);
+    return res.status(500).json({ error: 'लॉगआउट विफल / Failed to revoke session during logout.' });
+  }
 }
 
-module.exports = {
-  login,
-  logout
-};
+module.exports = { login, logout };

@@ -2,121 +2,115 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { authenticateToken } = require('../middleware/auth');
-const { login, logout } = require('../controllers/authController');
+const { validate, caseSchema, hearingSchema, citationSchema, personnelSchema, physicalFileSchema, bulkOperationSchema, viewPresetSchema } = require('../config/validator');
 
-// Configure multer to store uploaded files in memory buffers
 const upload = multer({ storage: multer.memoryStorage() });
 
-const {
-  getCases,
-  getCaseById,
-  createCase,
-  updateCase,
-  deleteCase,
-  parseCase,
-  parsePdfCaseFile,
-  extractPdfText
-} = require('../controllers/caseController');
-
-const {
-  getAlerts,
-  markAlertAsRead,
-  triggerManualCrawl,
-  checkDueCases
-} = require('../controllers/alertController');
-
-const {
-  getHearingsForCase,
-  addHearingToCase
-} = require('../controllers/hearingController');
-
-const {
-  getCitations,
-  createCitation,
-  updateCitation,
-  deleteCitation
-} = require('../controllers/citationController');
-
-const {
-  getAffidavitsForCase,
-  addAffidavitToCase,
-  deleteAffidavit
-} = require('../controllers/affidavitController');
-
-const {
-  getPersonnel,
-  createPersonnel,
-  updatePersonnel,
-  deletePersonnel
-} = require('../controllers/personnelController');
-
-const {
-  getFiles,
-  getFileById,
-  createFile,
-  updateFile,
-  deleteFile
-} = require('../controllers/fileRegistryController');
-
-const {
-  getMovements,
-  createMovement
-} = require('../controllers/movementController');
-
-// Auth Endpoints
+// ── Auth Endpoints (public) ──
+const { login, logout } = require('../controllers/authController');
 router.post('/auth/login', login);
-
-// Apply auth middleware to protect all subsequent routes
 router.use(authenticateToken);
-
 router.post('/auth/logout', logout);
 
-// Cases Endpoints
+// ── Cases ──
+const {
+  getCases, getCaseById, createCase, updateCase, deleteCase,
+  parseCase, parsePdfCaseFile, extractPdfText
+} = require('../controllers/caseController');
 router.get('/cases', getCases);
 router.post('/cases/parse-file', parseCase);
 router.post('/cases/parse-pdf', upload.single('file'), parsePdfCaseFile);
 router.post('/extract-pdf', upload.single('file'), extractPdfText);
 router.get('/cases/:id', getCaseById);
-router.post('/cases', createCase);
-router.put('/cases/:id', updateCase);
+router.post('/cases', validate(caseSchema), createCase);
+router.put('/cases/:id', validate(caseSchema), updateCase);
 router.delete('/cases/:id', deleteCase);
-router.post('/cases/trigger-crawl', triggerManualCrawl);
-router.post('/cases/check-due-cases', checkDueCases);
 
-// Alerts Endpoints
+// ── Alerts ──
+const { getAlerts, markAlertAsRead, triggerManualCrawl, checkDueCases } = require('../controllers/alertController');
 router.get('/alerts', getAlerts);
 router.put('/alerts/:id/read', markAlertAsRead);
+router.post('/alerts/trigger-crawl', triggerManualCrawl);
+router.post('/alerts/check-due-cases', checkDueCases);
 
-// Hearings Endpoints (linked to specific case)
+// ── Hearings ──
+const { getHearingsForCase, addHearingToCase } = require('../controllers/hearingController');
 router.get('/cases/:id/hearings', getHearingsForCase);
-router.post('/cases/:id/hearings', addHearingToCase);
+router.post('/cases/:id/hearings', validate(hearingSchema), addHearingToCase);
 
-// Citations Endpoints
+// ── Citations ──
+const { getCitations, createCitation, updateCitation, deleteCitation } = require('../controllers/citationController');
 router.get('/citations', getCitations);
-router.post('/citations', createCitation);
-router.put('/citations/:id', updateCitation);
+router.post('/citations', validate(citationSchema), createCitation);
+router.put('/citations/:id', validate(citationSchema), updateCitation);
 router.delete('/citations/:id', deleteCitation);
 
-// Affidavits Endpoints
+// ── Affidavits ──
+const { getAffidavitsForCase, addAffidavitToCase, deleteAffidavit } = require('../controllers/affidavitController');
 router.get('/cases/:id/affidavits', getAffidavitsForCase);
 router.post('/cases/:id/affidavits', addAffidavitToCase);
 router.delete('/affidavits/:id', deleteAffidavit);
 
-// Personnel Endpoints
+// ── Personnel ──
+const { getPersonnel, createPersonnel, updatePersonnel, deletePersonnel } = require('../controllers/personnelController');
 router.get('/personnel', getPersonnel);
-router.post('/personnel', createPersonnel);
-router.put('/personnel/:id', updatePersonnel);
+router.post('/personnel', validate(personnelSchema), createPersonnel);
+router.put('/personnel/:id', validate(personnelSchema), updatePersonnel);
 router.delete('/personnel/:id', deletePersonnel);
 
-// Physical Files Endpoints
+// ── Physical Files ──
+const { getFiles, getFileById, createFile, updateFile, deleteFile } = require('../controllers/fileRegistryController');
 router.get('/physical-files', getFiles);
 router.get('/physical-files/:id', getFileById);
-router.post('/physical-files', createFile);
-router.put('/physical-files/:id', updateFile);
+router.post('/physical-files', validate(physicalFileSchema), createFile);
+router.put('/physical-files/:id', validate(physicalFileSchema), updateFile);
 router.delete('/physical-files/:id', deleteFile);
 
-// File Movements Endpoints
+// ── File Movements ──
+const { getMovements, createMovement } = require('../controllers/movementController');
 router.get('/file-movements', getMovements);
 router.post('/file-movements', createMovement);
+
+// ── Reporting ──
+const { getCaseSummary, getHearingCalendar, getZoneDistribution, exportCases } = require('../controllers/reportController');
+router.get('/reports/case-summary', getCaseSummary);
+router.get('/reports/hearing-calendar', getHearingCalendar);
+router.get('/reports/zone-distribution', getZoneDistribution);
+router.get('/reports/export', exportCases);
+
+// ── Analytics ──
+const { getDashboard, getSystemHealth } = require('../controllers/analyticsController');
+router.get('/analytics/dashboard', getDashboard);
+router.get('/analytics/health', getSystemHealth);
+
+// ── Bulk Operations ──
+const { bulkUpdate } = require('../controllers/bulkController');
+router.post('/bulk/update', validate(bulkOperationSchema), bulkUpdate);
+
+// ── View Presets ──
+const { getPresets, createPreset, deletePreset } = require('../controllers/viewPresetController');
+router.get('/view-presets', getPresets);
+router.post('/view-presets', validate(viewPresetSchema), createPreset);
+router.delete('/view-presets/:id', deletePreset);
+
+// ── Full-Text Search ──
+const { search } = require('../controllers/searchController');
+router.get('/search', search);
+
+// ── Document Archival ──
+const { uploadDocument, getDocuments, downloadDocument } = require('../controllers/documentController');
+router.post('/cases/:id/documents', upload.single('file'), uploadDocument);
+router.get('/cases/:id/documents', getDocuments);
+router.get('/documents/:id/download', downloadDocument);
+
+// ── Audit Log ──
+const { getAuditLog } = require('../controllers/auditLogController');
+router.get('/audit-log', getAuditLog);
+
+// ── Batch Sync ──
+const { triggerBatchSync, triggerPlaywrightSync, getSyncStatus } = require('../controllers/syncController');
+router.post('/sync/start', triggerBatchSync);
+router.post('/sync/playwright', triggerPlaywrightSync);
+router.get('/sync/status', getSyncStatus);
 
 module.exports = router;

@@ -25,6 +25,7 @@ export default function CaseDetail() {
   const [caseObj, setCaseObj] = useState(null);
   const [hearings, setHearings] = useState([]);
   const [affidavits, setAffidavits] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -147,6 +148,9 @@ export default function CaseDetail() {
 
       const affidavitsData = await api.getAffidavitsForCase(id);
       setAffidavits(affidavitsData);
+
+      const docsData = await api.getDocumentsForCase(id);
+      setDocuments(docsData || []);
 
       setError(null);
     } catch (err) {
@@ -622,6 +626,86 @@ export default function CaseDetail() {
               </div>
             </div>
           )}
+
+          {/* Court Orders & Documents Section */}
+          <div className="glass-panel" style={{ background: '#fff', border: '1px solid #d1d5db', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '2px solid #0f2c59', paddingBottom: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f2c59', margin: 0 }}>
+                न्यायालय आदेश एवं दस्तावेज / Court Orders & Documents
+              </h2>
+              {caseObj.court_link && (
+                <a href={caseObj.court_link} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem', background: '#ff9933', borderColor: '#ff9933', color: '#fff', textDecoration: 'none', borderRadius: '6px', fontWeight: 700 }}>
+                  View on Court Website ↗
+                </a>
+              )}
+            </div>
+
+            {documents.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280', background: '#f9fafb', borderRadius: '8px', border: '1px dashed #d1d5db' }}>
+                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" style={{ marginBottom: '0.5rem', color: '#9ca3af' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <p style={{ margin: 0, fontSize: '0.85rem' }}>
+                  No court orders synced yet. Run the batch sync or upload documents manually.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {documents.map((doc, idx) => (
+                  <div key={doc.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px',
+                    padding: '0.65rem 1rem', transition: 'all 0.15s ease'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{
+                        background: '#ff9933', color: '#fff', width: '32px', height: '32px',
+                        borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.8rem', fontWeight: 700, flexShrink: 0
+                      }}>
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1e293b' }}>
+                          {doc.original_name}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                          {doc.mime_type} {doc.file_size ? `· ${(doc.file_size / 1024).toFixed(1)} KB` : ''} · {new Date(doc.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {doc.storage_path && doc.storage_path.startsWith('http') ? (
+                        <a href={doc.storage_path} target="_blank" rel="noopener noreferrer"
+                          style={{
+                            background: '#0f2c59', color: '#fff', border: 'none', borderRadius: '6px',
+                            padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600,
+                            cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                          }}>
+                          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          Open Order
+                        </a>
+                      ) : (
+                        <a href={api.getDocumentDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer"
+                          style={{
+                            background: '#0f2c59', color: '#fff', border: 'none', borderRadius: '6px',
+                            padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600,
+                            cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                          }}>
+                          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Download
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Stage-wise Affidavits Section */}
           {isHcorSc && (

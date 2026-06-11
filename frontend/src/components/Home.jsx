@@ -32,7 +32,7 @@ export default function Home() {
     triggerDueCasesCheck();
     const interval = setInterval(() => {
       setLiveTime(new Date());
-    }, 1000);
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 

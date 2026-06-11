@@ -1,41 +1,107 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const apiRoutes = require('./routes/api');
+const { requestLogger, logger } = require('./config/logger');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable Cross-Origin Resource Sharing (CORS)
-app.use(cors());
+// ── Security ──
+app.use(helmet());
 
-// Parse JSON request bodies
-app.use(express.json());
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
 
-// Wire up API router
-app.use('/api', apiRoutes);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 
-// Basic health check route
+// ── Rate Limiting ──
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many login attempts. Please try again after 15 minutes.' },
+});
+
+const generalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 200,
+});
+
+// ── Logging ──
+app.use(requestLogger);
+
+// ── Body Parsing ──
+app.use(express.json({ limit: '10mb' }));
+
+// ── API Routes ──
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/auth/login')) {
+    return authLimiter(req, res, next);
+  }
+  generalLimiter(req, res, next);
+}, apiRoutes);
+
+// ── Health Check ──
 app.get('/', (req, res) => {
   res.json({
     status: 'healthy',
-    message: 'Legal Case Monitoring System API is active.'
+    message: 'Legal Case Monitoring System API is active.',
+    version: '2.0.0',
+    timestamp: new Date().toISOString(),
   });
 });
 
-const scraperService = require('./services/scraperService');
-
-// Start listening
-const server = app.listen(PORT, () => {
-  console.log(`[Server] Legal case monitoring backend listening on port ${PORT}`);
-  scraperService.initScheduler();
+// ── Error Handler ──
+app.use((err, req, res, _next) => {
+  logger.error({ err, requestId: req.requestId }, 'Unhandled error');
+  res.status(500).json({ error: 'Internal server error' });
 });
 
-// Graceful shutdown handling
+// ── Start Server ──
+const server = app.listen(PORT, () => {
+  logger.info({ port: PORT }, 'Backend server started');
+
+  // Initialize scheduler services
+  try {
+    const scraperService = require('./services/scraperService');
+    scraperService.initScheduler();
+  } catch (e) { logger.error({ err: e }, 'Failed to init scraper'); }
+
+  try {
+    const backupService = require('./services/backupService');
+    backupService.initBackupScheduler();
+  } catch (e) { logger.error({ err: e }, 'Failed to init backup scheduler'); }
+
+  // Check hearing reminders every 4 hours
+  try {
+    const emailService = require('./services/emailService');
+    const checkReminders = () => {
+      emailService.checkAndQueueReminders().then(() => emailService.processEmailQueue());
+    };
+    checkReminders();
+    setInterval(checkReminders, 4 * 60 * 60 * 1000);
+  } catch (e) { logger.error({ err: e }, 'Failed to init email scheduler'); }
+});
+
+// ── Graceful Shutdown ──
 process.on('SIGINT', () => {
-  console.log('Shutting down server...');
+  logger.info('Shutting down server...');
   server.close(() => {
-    console.log('Server process terminated.');
+    logger.info('Server process terminated.');
     process.exit(0);
   });
 });
+
+module.exports = app;

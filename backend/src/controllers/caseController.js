@@ -1,33 +1,11 @@
-const db = require('../config/database');
-
-// Promise-based wrappers for sqlite3
-const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
-  db.all(sql, params, (err, rows) => {
-    if (err) return reject(err);
-    resolve(rows);
-  });
-});
-
-const dbGet = (sql, params = []) => new Promise((resolve, reject) => {
-  db.get(sql, params, (err, row) => {
-    if (err) return reject(err);
-    resolve(row);
-  });
-});
-
-const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
-  db.run(sql, params, function(err) {
-    if (err) return reject(err);
-    resolve({ id: this.lastID, changes: this.changes });
-  });
-});
+const { run, get, all } = require('../config/dbHelper');
 
 // GET /api/cases - List all cases, with optional search filter
 const getCases = async (req, res) => {
   try {
     const { search, status, case_type, railway } = req.query;
     let query = `
-      SELECT c.*, 
+      SELECT c.*,
              (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id) AS next_hearing_date
       FROM cases c
       WHERE 1=1
@@ -55,10 +33,9 @@ const getCases = async (req, res) => {
       params.push(railway);
     }
 
-    // Order by recently updated or created
     query += ' ORDER BY c.updated_at DESC, c.id DESC';
 
-    const cases = await dbAll(query, params);
+    const cases = all(query, params);
     res.json(cases);
   } catch (err) {
     console.error('Error fetching cases:', err);
@@ -66,16 +43,13 @@ const getCases = async (req, res) => {
   }
 };
 
-// GET /api/cases/:id - Retrieve a single case by ID
+// GET /api/cases/:id
 const getCaseById = async (req, res) => {
   try {
-    const caseId = req.params.id;
-    const caseRecord = await dbGet('SELECT * FROM cases WHERE id = ?', [caseId]);
-
+    const caseRecord = get('SELECT * FROM cases WHERE id = ?', [req.params.id]);
     if (!caseRecord) {
       return res.status(404).json({ error: 'Case not found.' });
     }
-
     res.json(caseRecord);
   } catch (err) {
     console.error('Error fetching case by ID:', err);
@@ -86,47 +60,8 @@ const getCaseById = async (req, res) => {
 // POST /api/cases - Create a new case
 const createCase = async (req, res) => {
   try {
-    const {
-      case_ref_no,
-      railway,
-      applicant,
-      respondent,
-      employee_designation,
-      case_type,
-      case_number,
-      case_year,
-      forum,
-      synopsis,
-      file_no,
-      link_file_no,
-      last_date_reply,
-      date_filing_reply,
-      present_status,
-      last_date_appeal_implementation,
-      nodal_officer_name,
-      nodal_officer_contact,
-      advocate_name,
-      advocate_contact,
-      original_oa_no,
-      original_oa_forum,
-      original_oa_date_disposal,
-      original_oa_status,
-      court_link,
-      charge_sheet_issued_date, charge_sheet_issued_notes,
-      reply_to_charges_date, reply_to_charges_notes,
-      inquiry_commenced_date, inquiry_commenced_notes,
-      io_report_submitted_date, io_report_submitted_notes,
-      da_notice_date, da_notice_notes,
-      reply_to_da_notice_date, reply_to_da_notice_notes,
-      da_penalty_order_date, da_penalty_order_notes,
-      upsc_advice_date, upsc_advice_notes,
-      appeal_oa_filed_date, appeal_oa_filed_notes,
-      counter_affidavit_filed_date, counter_affidavit_filed_notes,
-      cat_court_order_date, cat_court_order_notes,
-      writ_petition_filed_date, writ_petition_filed_notes
-    } = req.body;
-
-    if (!case_ref_no) {
+    const body = req.body;
+    if (!body.case_ref_no) {
       return res.status(400).json({ error: 'case_ref_no is required.' });
     }
 
@@ -154,59 +89,36 @@ const createCase = async (req, res) => {
     `;
 
     const params = [
-      case_ref_no,
-      railway || null,
-      applicant || null,
-      respondent || null,
-      employee_designation || null,
-      case_type || null,
-      case_number || null,
-      case_year ? parseInt(case_year) : null,
-      forum || null,
-      synopsis || null,
-      file_no || null,
-      link_file_no || null,
-      last_date_reply || null,
-      date_filing_reply || null,
-      present_status || 'Pending',
-      last_date_appeal_implementation || null,
-      nodal_officer_name || null,
-      nodal_officer_contact || null,
-      advocate_name || null,
-      advocate_contact || null,
-      original_oa_no || null,
-      original_oa_forum || null,
-      original_oa_date_disposal || null,
-      original_oa_status || null,
-      court_link || null,
-      charge_sheet_issued_date || null,
-      charge_sheet_issued_notes || null,
-      reply_to_charges_date || null,
-      reply_to_charges_notes || null,
-      inquiry_commenced_date || null,
-      inquiry_commenced_notes || null,
-      io_report_submitted_date || null,
-      io_report_submitted_notes || null,
-      da_notice_date || null,
-      da_notice_notes || null,
-      reply_to_da_notice_date || null,
-      reply_to_da_notice_notes || null,
-      da_penalty_order_date || null,
-      da_penalty_order_notes || null,
-      upsc_advice_date || null,
-      upsc_advice_notes || null,
-      appeal_oa_filed_date || null,
-      appeal_oa_filed_notes || null,
-      counter_affidavit_filed_date || null,
-      counter_affidavit_filed_notes || null,
-      cat_court_order_date || null,
-      cat_court_order_notes || null,
-      writ_petition_filed_date || null,
-      writ_petition_filed_notes || null
+      body.case_ref_no, body.railway || null, body.applicant || null,
+      body.respondent || null, body.employee_designation || null,
+      body.case_type || null, body.case_number || null,
+      body.case_year ? parseInt(body.case_year) : null,
+      body.forum || null, body.synopsis || null,
+      body.file_no || null, body.link_file_no || null,
+      body.last_date_reply || null, body.date_filing_reply || null,
+      body.present_status || 'Pending',
+      body.last_date_appeal_implementation || null,
+      body.nodal_officer_name || null, body.nodal_officer_contact || null,
+      body.advocate_name || null, body.advocate_contact || null,
+      body.original_oa_no || null, body.original_oa_forum || null,
+      body.original_oa_date_disposal || null, body.original_oa_status || null,
+      body.court_link || null,
+      body.charge_sheet_issued_date || null, body.charge_sheet_issued_notes || null,
+      body.reply_to_charges_date || null, body.reply_to_charges_notes || null,
+      body.inquiry_commenced_date || null, body.inquiry_commenced_notes || null,
+      body.io_report_submitted_date || null, body.io_report_submitted_notes || null,
+      body.da_notice_date || null, body.da_notice_notes || null,
+      body.reply_to_da_notice_date || null, body.reply_to_da_notice_notes || null,
+      body.da_penalty_order_date || null, body.da_penalty_order_notes || null,
+      body.upsc_advice_date || null, body.upsc_advice_notes || null,
+      body.appeal_oa_filed_date || null, body.appeal_oa_filed_notes || null,
+      body.counter_affidavit_filed_date || null, body.counter_affidavit_filed_notes || null,
+      body.cat_court_order_date || null, body.cat_court_order_notes || null,
+      body.writ_petition_filed_date || null, body.writ_petition_filed_notes || null
     ];
 
-    const result = await dbRun(sql, params);
-    const newCase = await dbGet('SELECT * FROM cases WHERE id = ?', [result.id]);
+    const result = run(sql, params);
+    const newCase = get('SELECT * FROM cases WHERE id = ?', [result.id]);
     res.status(201).json(newCase);
   } catch (err) {
     console.error('Error creating case:', err);
@@ -217,87 +129,33 @@ const createCase = async (req, res) => {
   }
 };
 
-// PUT /api/cases/:id - Update an existing case
+// PUT /api/cases/:id
 const updateCase = async (req, res) => {
   try {
     const caseId = req.params.id;
-
-    // First check if the case exists
-    const existingCase = await dbGet('SELECT id FROM cases WHERE id = ?', [caseId]);
+    const existingCase = get('SELECT id FROM cases WHERE id = ?', [caseId]);
     if (!existingCase) {
       return res.status(404).json({ error: 'Case not found.' });
     }
 
-    const {
-      case_ref_no,
-      railway,
-      applicant,
-      respondent,
-      employee_designation,
-      case_type,
-      case_number,
-      case_year,
-      forum,
-      synopsis,
-      file_no,
-      link_file_no,
-      last_date_reply,
-      date_filing_reply,
-      present_status,
-      last_date_appeal_implementation,
-      nodal_officer_name,
-      nodal_officer_contact,
-      advocate_name,
-      advocate_contact,
-      original_oa_no,
-      original_oa_forum,
-      original_oa_date_disposal,
-      original_oa_status,
-      court_link,
-      charge_sheet_issued_date, charge_sheet_issued_notes,
-      reply_to_charges_date, reply_to_charges_notes,
-      inquiry_commenced_date, inquiry_commenced_notes,
-      io_report_submitted_date, io_report_submitted_notes,
-      da_notice_date, da_notice_notes,
-      reply_to_da_notice_date, reply_to_da_notice_notes,
-      da_penalty_order_date, da_penalty_order_notes,
-      upsc_advice_date, upsc_advice_notes,
-      appeal_oa_filed_date, appeal_oa_filed_notes,
-      counter_affidavit_filed_date, counter_affidavit_filed_notes,
-      cat_court_order_date, cat_court_order_notes,
-      writ_petition_filed_date, writ_petition_filed_notes
-    } = req.body;
-
-    if (!case_ref_no) {
+    const body = req.body;
+    if (!body.case_ref_no) {
       return res.status(400).json({ error: 'case_ref_no is required.' });
     }
 
+    const val = (key, fallback = null) => body[key] !== undefined ? body[key] : fallback;
+
     const sql = `
       UPDATE cases
-      SET case_ref_no = ?,
-          railway = ?,
-          applicant = ?,
-          respondent = ?,
-          employee_designation = ?,
-          case_type = ?,
-          case_number = ?,
-          case_year = ?,
-          forum = ?,
-          synopsis = ?,
-          file_no = ?,
-          link_file_no = ?,
-          last_date_reply = ?,
-          date_filing_reply = ?,
-          present_status = ?,
-          last_date_appeal_implementation = ?,
-          nodal_officer_name = ?,
-          nodal_officer_contact = ?,
-          advocate_name = ?,
-          advocate_contact = ?,
-          original_oa_no = ?,
-          original_oa_forum = ?,
-          original_oa_date_disposal = ?,
-          original_oa_status = ?,
+      SET case_ref_no = ?, railway = ?, applicant = ?, respondent = ?,
+          employee_designation = ?, case_type = ?, case_number = ?,
+          case_year = ?, forum = ?, synopsis = ?, file_no = ?,
+          link_file_no = ?, last_date_reply = ?, date_filing_reply = ?,
+          present_status = ?, last_date_appeal_implementation = ?,
+          nodal_officer_name = ?, nodal_officer_contact = ?,
+          advocate_name = ?, advocate_contact = ?,
+          original_oa_no = ?, original_oa_forum = ?,
+          original_oa_date_disposal = ?, original_oa_status = ?,
           court_link = ?,
           charge_sheet_issued_date = ?, charge_sheet_issued_notes = ?,
           reply_to_charges_date = ?, reply_to_charges_notes = ?,
@@ -316,60 +174,34 @@ const updateCase = async (req, res) => {
     `;
 
     const params = [
-      case_ref_no,
-      railway !== undefined ? railway : null,
-      applicant !== undefined ? applicant : null,
-      respondent !== undefined ? respondent : null,
-      employee_designation !== undefined ? employee_designation : null,
-      case_type !== undefined ? case_type : null,
-      case_number !== undefined ? case_number : null,
-      case_year !== undefined && case_year !== '' ? parseInt(case_year) : null,
-      forum !== undefined ? forum : null,
-      synopsis !== undefined ? synopsis : null,
-      file_no !== undefined ? file_no : null,
-      link_file_no !== undefined ? link_file_no : null,
-      last_date_reply !== undefined ? last_date_reply : null,
-      date_filing_reply !== undefined ? date_filing_reply : null,
-      present_status !== undefined ? present_status : 'Pending',
-      last_date_appeal_implementation !== undefined ? last_date_appeal_implementation : null,
-      nodal_officer_name !== undefined ? nodal_officer_name : null,
-      nodal_officer_contact !== undefined ? nodal_officer_contact : null,
-      advocate_name !== undefined ? advocate_name : null,
-      advocate_contact !== undefined ? advocate_contact : null,
-      original_oa_no !== undefined ? original_oa_no : null,
-      original_oa_forum !== undefined ? original_oa_forum : null,
-      original_oa_date_disposal !== undefined ? original_oa_date_disposal : null,
-      original_oa_status !== undefined ? original_oa_status : null,
-      court_link !== undefined ? court_link : null,
-      charge_sheet_issued_date !== undefined ? charge_sheet_issued_date : null,
-      charge_sheet_issued_notes !== undefined ? charge_sheet_issued_notes : null,
-      reply_to_charges_date !== undefined ? reply_to_charges_date : null,
-      reply_to_charges_notes !== undefined ? reply_to_charges_notes : null,
-      inquiry_commenced_date !== undefined ? inquiry_commenced_date : null,
-      inquiry_commenced_notes !== undefined ? inquiry_commenced_notes : null,
-      io_report_submitted_date !== undefined ? io_report_submitted_date : null,
-      io_report_submitted_notes !== undefined ? io_report_submitted_notes : null,
-      da_notice_date !== undefined ? da_notice_date : null,
-      da_notice_notes !== undefined ? da_notice_notes : null,
-      reply_to_da_notice_date !== undefined ? reply_to_da_notice_date : null,
-      reply_to_da_notice_notes !== undefined ? reply_to_da_notice_notes : null,
-      da_penalty_order_date !== undefined ? da_penalty_order_date : null,
-      da_penalty_order_notes !== undefined ? da_penalty_order_notes : null,
-      upsc_advice_date !== undefined ? upsc_advice_date : null,
-      upsc_advice_notes !== undefined ? upsc_advice_notes : null,
-      appeal_oa_filed_date !== undefined ? appeal_oa_filed_date : null,
-      appeal_oa_filed_notes !== undefined ? appeal_oa_filed_notes : null,
-      counter_affidavit_filed_date !== undefined ? counter_affidavit_filed_date : null,
-      counter_affidavit_filed_notes !== undefined ? counter_affidavit_filed_notes : null,
-      cat_court_order_date !== undefined ? cat_court_order_date : null,
-      cat_court_order_notes !== undefined ? cat_court_order_notes : null,
-      writ_petition_filed_date !== undefined ? writ_petition_filed_date : null,
-      writ_petition_filed_notes !== undefined ? writ_petition_filed_notes : null,
+      body.case_ref_no, val('railway'), val('applicant'), val('respondent'),
+      val('employee_designation'), val('case_type'), val('case_number'),
+      val('case_year') !== '' ? parseInt(val('case_year')) : null,
+      val('forum'), val('synopsis'), val('file_no'),
+      val('link_file_no'), val('last_date_reply'), val('date_filing_reply'),
+      val('present_status', 'Pending'), val('last_date_appeal_implementation'),
+      val('nodal_officer_name'), val('nodal_officer_contact'),
+      val('advocate_name'), val('advocate_contact'),
+      val('original_oa_no'), val('original_oa_forum'),
+      val('original_oa_date_disposal'), val('original_oa_status'),
+      val('court_link'),
+      val('charge_sheet_issued_date'), val('charge_sheet_issued_notes'),
+      val('reply_to_charges_date'), val('reply_to_charges_notes'),
+      val('inquiry_commenced_date'), val('inquiry_commenced_notes'),
+      val('io_report_submitted_date'), val('io_report_submitted_notes'),
+      val('da_notice_date'), val('da_notice_notes'),
+      val('reply_to_da_notice_date'), val('reply_to_da_notice_notes'),
+      val('da_penalty_order_date'), val('da_penalty_order_notes'),
+      val('upsc_advice_date'), val('upsc_advice_notes'),
+      val('appeal_oa_filed_date'), val('appeal_oa_filed_notes'),
+      val('counter_affidavit_filed_date'), val('counter_affidavit_filed_notes'),
+      val('cat_court_order_date'), val('cat_court_order_notes'),
+      val('writ_petition_filed_date'), val('writ_petition_filed_notes'),
       caseId
     ];
 
-    await dbRun(sql, params);
-    const updatedCase = await dbGet('SELECT * FROM cases WHERE id = ?', [caseId]);
+    run(sql, params);
+    const updatedCase = get('SELECT * FROM cases WHERE id = ?', [caseId]);
     res.json(updatedCase);
   } catch (err) {
     console.error('Error updating case:', err);
@@ -380,18 +212,14 @@ const updateCase = async (req, res) => {
   }
 };
 
-// DELETE /api/cases/:id - Delete a case (and CASCADE deletes its hearings due to foreign keys)
+// DELETE /api/cases/:id
 const deleteCase = async (req, res) => {
   try {
-    const caseId = req.params.id;
-
-    // Check if the case exists
-    const existingCase = await dbGet('SELECT id FROM cases WHERE id = ?', [caseId]);
+    const existingCase = get('SELECT id FROM cases WHERE id = ?', [req.params.id]);
     if (!existingCase) {
       return res.status(404).json({ error: 'Case not found.' });
     }
-
-    await dbRun('DELETE FROM cases WHERE id = ?', [caseId]);
+    run('DELETE FROM cases WHERE id = ?', [req.params.id]);
     res.json({ message: 'Case successfully deleted.' });
   } catch (err) {
     console.error('Error deleting case:', err);
@@ -402,7 +230,7 @@ const deleteCase = async (req, res) => {
 const { parseCaseFile } = require('../services/caseParser');
 const pdfParse = require('pdf-parse');
 
-// POST /api/cases/parse-file - Parse raw text of a case file into YAML structure
+// POST /api/cases/parse-file
 const parseCase = async (req, res) => {
   try {
     const { text } = req.body;
@@ -417,22 +245,17 @@ const parseCase = async (req, res) => {
   }
 };
 
-// POST /api/cases/parse-pdf - Parse uploaded PDF file into YAML structure
+// POST /api/cases/parse-pdf
 const parsePdfCaseFile = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No PDF file uploaded.' });
     }
-    
-    // Extract text from the PDF buffer in memory
     const pdfData = await pdfParse(req.file.buffer);
     const text = pdfData.text;
-    
     if (!text || !text.trim()) {
       return res.status(400).json({ error: 'Failed to extract text from PDF. The document might be blank or scanned as an image.' });
     }
-    
-    // Generate YAML from the extracted text using customized provider/model parameters
     const yamlOutput = await parseCaseFile(text, req.headers);
     res.json({ yaml: yamlOutput, text: text.substring(0, 1000) });
   } catch (err) {
@@ -441,15 +264,14 @@ const parsePdfCaseFile = async (req, res) => {
   }
 };
 
-// POST /api/extract-pdf - Extract text from uploaded PDF
+// POST /api/extract-pdf
 const extractPdfText = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No PDF file uploaded.' });
     }
     const pdfData = await pdfParse(req.file.buffer);
-    const text = pdfData.text;
-    res.json({ text });
+    res.json({ text: pdfData.text });
   } catch (err) {
     console.error('Error extracting PDF text:', err);
     res.status(500).json({ error: 'Failed to extract text from PDF.' });
@@ -457,12 +279,6 @@ const extractPdfText = async (req, res) => {
 };
 
 module.exports = {
-  getCases,
-  getCaseById,
-  createCase,
-  updateCase,
-  deleteCase,
-  parseCase,
-  parsePdfCaseFile,
-  extractPdfText
+  getCases, getCaseById, createCase, updateCase, deleteCase,
+  parseCase, parsePdfCaseFile, extractPdfText
 };
