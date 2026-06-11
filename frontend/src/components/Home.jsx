@@ -347,9 +347,22 @@ export default function Home() {
             <h3 style={{ fontSize: '1.1rem', color: '#0f2c59', margin: 0, fontWeight: 700, fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
               🔔 न्यायिक अपडेट और अलर्ट / Judicial Updates & Alerts
               {alerts.length > 0 && (
-                <span style={{ background: '#ef4444', color: '#fff', fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '12px', fontWeight: 600 }}>
-                  {alerts.length} new
-                </span>
+                <>
+                  <span style={{ background: '#ef4444', color: '#fff', fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '12px', fontWeight: 600 }}>
+                    {alerts.length} new
+                  </span>
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try { await api.dismissAllAlerts(); setAlerts([]); } catch {}
+                    }}
+                    style={{
+                      background: 'none', border: '1px solid #d1d5db', borderRadius: '4px',
+                      padding: '0.15rem 0.5rem', fontSize: '0.65rem', cursor: 'pointer',
+                      color: '#6b7280', fontWeight: 600, marginLeft: '0.5rem'
+                    }}
+                  >Dismiss all</button>
+                </>
               )}
             </h3>
           </div>
@@ -492,9 +505,13 @@ export default function Home() {
           <span className="kpi-label" style={{ color: '#b45309' }}>Pending Replies</span>
           <span className="kpi-value" style={{ color: '#d97706' }}>{loading ? '...' : pendingReplies}</span>
         </div>
-        <div className="kpi-card" style={{ background: '#fff', border: '1px solid #d1d5db', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+        <div className="kpi-card" style={{ background: '#fff', border: '1px solid #d1d5db', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', cursor: 'pointer' }} onClick={() => navigate('/cases?status=Disposed')}>
           <span className="kpi-label" style={{ color: '#0369a1' }}>Upcoming Hearings</span>
           <span className="kpi-value" style={{ color: '#0284c7' }}>{loading ? '...' : upcomingHearings}</span>
+        </div>
+        <div className="kpi-card" style={{ background: '#fff', border: '1px solid #d1d5db', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', cursor: 'pointer' }} onClick={() => navigate('/cases?status=Disposed')}>
+          <span className="kpi-label" style={{ color: '#059669' }}>Cases Disposed</span>
+          <span className="kpi-value" style={{ color: '#059669' }}>{loading ? '...' : disposedCases}</span>
         </div>
       </div>
 

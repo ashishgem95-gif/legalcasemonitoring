@@ -1,5 +1,6 @@
 const { runBatchSync } = require('../services/batchSyncService');
 const { runPlaywrightSync } = require('../services/playwrightScraper');
+const { runOrderSync } = require('../services/orderScraper');
 const { logger } = require('../config/logger');
 
 let syncState = {
@@ -76,6 +77,29 @@ exports.triggerPlaywrightSync = async (req, res) => {
 };
 
 // GET /api/sync/status
+// POST /api/sync/orders — scrape daily order details and PDFs for all CAT cases
+exports.triggerOrderSync = async (req, res) => {
+  if (syncState.running) {
+    return res.status(409).json({ error: 'A sync is already running', type: syncState.type });
+  }
+
+  syncState = { running: true, type: 'orders', startedAt: new Date().toISOString(), completedAt: null, summary: null };
+
+  res.json({ status: 'started', message: 'Order scraper initiated. Extracting hearing dates and PDF links from CAT daily order pages.', startedAt: syncState.startedAt });
+
+  try {
+    const result = await runOrderSync();
+    syncState.running = false;
+    syncState.completedAt = new Date().toISOString();
+    syncState.summary = result;
+    logger.info(result, 'Order sync completed');
+  } catch (err) {
+    syncState.running = false;
+    syncState.summary = { error: err.message };
+    logger.error({ err }, 'Order sync failed');
+  }
+};
+
 exports.getSyncStatus = (req, res) => {
   res.json(syncState);
 };

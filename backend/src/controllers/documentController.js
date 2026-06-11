@@ -53,7 +53,7 @@ exports.uploadDocument = (req, res) => {
 exports.getDocuments = (req, res) => {
   try {
     const docs = all(
-      `SELECT id, case_id, original_name, mime_type, file_size, uploaded_by, created_at
+      `SELECT id, case_id, original_name, mime_type, file_size, storage_path, uploaded_by, created_at
        FROM case_documents WHERE case_id = ? ORDER BY created_at DESC`,
       [req.params.id]
     );

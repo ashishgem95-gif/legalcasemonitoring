@@ -322,6 +322,37 @@ export default function CaseDetail() {
           <p style={{ color: '#4b5563', marginTop: '0.25rem' }}>
             {caseObj.case_type || 'General'} Case • Forum: <strong style={{ color: '#111827' }}>{caseObj.forum || 'N/A'}</strong>
           </p>
+          {caseObj.present_status === 'Disposed' && caseObj.disposal_date ? (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+              background: '#ECFDF5', border: '1px solid #A7F3D0',
+              borderRadius: '6px', padding: '0.4rem 0.75rem', marginTop: '0.5rem'
+            }}>
+              <svg width="14" height="14" fill="none" stroke="#059669" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#065F46' }}>
+                Disposed on {new Date(caseObj.disposal_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+              </span>
+            </div>
+          ) : caseObj.next_hearing_date && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+              background: caseObj.next_hearing_date < new Date().toISOString().split('T')[0] ? '#FEF2F2' : '#FFF7ED',
+              border: `1px solid ${caseObj.next_hearing_date < new Date().toISOString().split('T')[0] ? '#FECACA' : '#FED7AA'}`,
+              borderRadius: '6px', padding: '0.4rem 0.75rem', marginTop: '0.5rem'
+            }}>
+              <svg width="14" height="14" fill="none" stroke={caseObj.next_hearing_date < new Date().toISOString().split('T')[0] ? '#DC2626' : '#D97706'} strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1A1A1A' }}>
+                Next Hearing: {new Date(caseObj.next_hearing_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+              </span>
+              {caseObj.next_hearing_date < new Date().toISOString().split('T')[0] && (
+                <span style={{ background: '#DC2626', color: '#fff', fontSize: '0.6rem', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 700 }}>OVERDUE</span>
+              )}
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -410,179 +441,6 @@ export default function CaseDetail() {
                 {caseObj.synopsis || 'No synopsis described for this case.'}
               </div>
             </div>
-          </div>
-
-          {/* Collapsible Progression Tracker Card */}
-          <div className="glass-panel" style={{ background: '#fff', border: '1px solid #d1d5db', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0f2c59', paddingBottom: '0.5rem' }}>
-              <button 
-                className="collapsible-header-btn" 
-                onClick={() => setIsProgressionOpen(!isProgressionOpen)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <svg width="20" height="20" fill="none" stroke="#0f2c59" strokeWidth="2.5" viewBox="0 0 24 24" style={{ marginTop: '-2px' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f2c59', margin: 0, textAlign: 'left' }}>
-                    अनुशासनात्मक / मुकदमा प्रगति ट्रैकर (12 चरण) - Disciplinary / Litigation Progression Tracker
-                  </h2>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 500 }}>
-                    {isProgressionOpen ? 'Collapse / समेटें' : 'Expand / विस्तार करें'}
-                  </span>
-                  <svg 
-                    width="18" 
-                    height="18" 
-                    fill="none" 
-                    stroke="#4b5563" 
-                    strokeWidth="2.5" 
-                    viewBox="0 0 24 24"
-                    style={{ transition: 'transform 0.2s ease' }}
-                    className={isProgressionOpen ? 'rotate-180' : ''}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </button>
-            </div>
-
-            {isProgressionOpen && (
-              <div style={{ marginTop: '1.25rem' }}>
-                <p style={{ color: '#4b5563', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-                  Manage the dates and operational notes for each of the 12 key progression stages below. Active dates will dynamically map to the chronological horizontal timeline at the bottom.
-                </p>
-
-                {progressError && (
-                  <div className="alert-banner error" style={{ padding: '0.75rem 1rem', marginBottom: '1rem', borderRadius: '6px' }}>
-                    {progressError}
-                  </div>
-                )}
-
-                {progressSuccess && (
-                  <div className="alert-banner" style={{ padding: '0.75rem 1rem', marginBottom: '1rem', background: '#ecfdf5', color: '#10b981', border: '1px solid #a7f3d0', borderRadius: '6px' }}>
-                    ✔ Progression updates successfully saved to case records.
-                  </div>
-                )}
-
-                {/* 12-Stage Grid */}
-                <div className="progression-grid">
-                  {PROGRESSION_STAGES.map(s => {
-                    const dateVal = progressData[`${s.id}_date`] || '';
-                    const notesVal = progressData[`${s.id}_notes`] || '';
-                    return (
-                      <div 
-                        key={s.id} 
-                        className="progression-stage-card" 
-                        style={{ borderTop: `4px solid ${s.color}` }}
-                      >
-                        <div className="stage-header">
-                          <span className="stage-indicator-dot" style={{ backgroundColor: s.color }}></span>
-                          <span className="stage-title-text" style={{ color: '#0f2c59' }}>{s.label}</span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                          <div>
-                            <label style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, display: 'block', marginBottom: '0.25rem' }}>Stage Date</label>
-                            <input 
-                              type="date" 
-                              className="form-control" 
-                              value={dateVal}
-                              onChange={(e) => setProgressData(prev => ({ ...prev, [`${s.id}_date`]: e.target.value }))}
-                              style={{ width: '100%', padding: '0.375rem 0.5rem', fontSize: '0.85rem' }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, display: 'block', marginBottom: '0.25rem' }}>Status / Progress Notes</label>
-                            <textarea 
-                              className="form-control" 
-                              rows="2"
-                              placeholder="Add notes, file ref, or details..."
-                              value={notesVal}
-                              onChange={(e) => setProgressData(prev => ({ ...prev, [`${s.id}_notes`]: e.target.value }))}
-                              style={{ width: '100%', padding: '0.375rem 0.5rem', fontSize: '0.825rem', resize: 'vertical', minHeight: '50px' }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Save Progression Controls */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', padding: '1rem 0 0 0', borderTop: '1px solid #e5e7eb' }}>
-                  <button 
-                    className="btn btn-primary" 
-                    onClick={handleSaveProgression}
-                    disabled={progressSaving}
-                    style={{ background: '#0f2c59', borderColor: '#0f2c59', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem' }}
-                  >
-                    {progressSaving ? (
-                      <>
-                        <span className="spinner-small" style={{ borderColor: 'rgba(255,255,255,0.2)', borderTopColor: '#fff', display: 'inline-block' }}></span>
-                        Saving Changes...
-                      </>
-                    ) : (
-                      <>
-                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                        </svg>
-                        Save Progress Details
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Active Horizontal Chronological Timeline */}
-                <div style={{ marginTop: '2rem' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f2c59', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
-                    कालानुक्रमिक प्रगति समयरेखा / Chronological Progression Timeline
-                  </h3>
-
-                  {getTimelineSteps().length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '2rem', background: '#f9fafb', border: '1px dashed #d1d5db', borderRadius: '8px', color: '#6b7280', fontSize: '0.875rem' }}>
-                      No active stages on the timeline yet. Add dates in the grid above and save to visualize the progression path.
-                    </div>
-                  ) : (
-                    <div className="horizontal-timeline-container">
-                      <div className="horizontal-timeline-track">
-                        {getTimelineSteps().map((step, idx) => (
-                          <div key={step.id} className="timeline-node">
-                            <span 
-                              className="timeline-node-dot" 
-                              style={{ backgroundColor: step.color }}
-                              title={step.fullLabel}
-                            ></span>
-                            <div className="timeline-node-label" style={{ color: '#0f2c59' }}>{step.label}</div>
-                            <div className="timeline-node-date">{formatTimelineDate(step.date)}</div>
-                            {step.notes && (
-                              <div style={{ 
-                                background: '#ffffff', 
-                                border: `1px solid ${step.color}`, 
-                                borderRadius: '6px', 
-                                padding: '0.35rem 0.5rem', 
-                                fontSize: '0.7rem', 
-                                color: '#4b5563', 
-                                marginTop: '0.5rem', 
-                                maxWidth: '140px',
-                                textOverflow: 'ellipsis',
-                                overflow: 'hidden',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 3,
-                                WebkitBoxOrient: 'vertical',
-                                lineBreak: 'anywhere'
-                              }} title={step.notes}>
-                                {step.notes}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
 
@@ -675,31 +533,17 @@ export default function CaseDetail() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      {doc.storage_path && doc.storage_path.startsWith('http') ? (
-                        <a href={doc.storage_path} target="_blank" rel="noopener noreferrer"
-                          style={{
-                            background: '#0f2c59', color: '#fff', border: 'none', borderRadius: '6px',
-                            padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600,
-                            cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
-                          }}>
-                          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                          Open Order
-                        </a>
-                      ) : (
-                        <a href={api.getDocumentDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer"
-                          style={{
-                            background: '#0f2c59', color: '#fff', border: 'none', borderRadius: '6px',
-                            padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600,
-                            cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
-                          }}>
-                          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                          </svg>
-                          Download
-                        </a>
-                      )}
+                      <a href={doc.storage_path} target="_blank" rel="noopener noreferrer"
+                        style={{
+                          background: '#D97706', color: '#fff', border: 'none', borderRadius: '6px',
+                          padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600,
+                          cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                        }}>
+                        <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        {doc.mime_type === 'application/pdf' ? 'Open PDF' : 'Open Case Page'}
+                      </a>
                     </div>
                   </div>
                 ))}

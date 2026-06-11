@@ -73,4 +73,13 @@ const checkDueCases = async (req, res) => {
   }
 };
 
-module.exports = { getAlerts, markAlertAsRead, triggerManualCrawl, checkDueCases };
+const markAllAlertsAsRead = async (req, res) => {
+  try {
+    run('UPDATE case_alerts SET is_read = 1 WHERE is_read = 0');
+    res.json({ message: 'All notifications dismissed.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to dismiss notifications.' });
+  }
+};
+
+module.exports = { getAlerts, markAlertAsRead, markAllAlertsAsRead, triggerManualCrawl, checkDueCases };

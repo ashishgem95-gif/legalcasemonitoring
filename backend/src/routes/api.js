@@ -27,9 +27,10 @@ router.put('/cases/:id', validate(caseSchema), updateCase);
 router.delete('/cases/:id', deleteCase);
 
 // ── Alerts ──
-const { getAlerts, markAlertAsRead, triggerManualCrawl, checkDueCases } = require('../controllers/alertController');
+const { getAlerts, markAlertAsRead, markAllAlertsAsRead, triggerManualCrawl, checkDueCases } = require('../controllers/alertController');
 router.get('/alerts', getAlerts);
 router.put('/alerts/:id/read', markAlertAsRead);
+router.put('/alerts/read-all', markAllAlertsAsRead);
 router.post('/alerts/trigger-crawl', triggerManualCrawl);
 router.post('/alerts/check-due-cases', checkDueCases);
 
@@ -108,9 +109,10 @@ const { getAuditLog } = require('../controllers/auditLogController');
 router.get('/audit-log', getAuditLog);
 
 // ── Batch Sync ──
-const { triggerBatchSync, triggerPlaywrightSync, getSyncStatus } = require('../controllers/syncController');
+const { triggerBatchSync, triggerPlaywrightSync, triggerOrderSync, getSyncStatus } = require('../controllers/syncController');
 router.post('/sync/start', triggerBatchSync);
 router.post('/sync/playwright', triggerPlaywrightSync);
+router.post('/sync/orders', triggerOrderSync);
 router.get('/sync/status', getSyncStatus);
 
 module.exports = router;

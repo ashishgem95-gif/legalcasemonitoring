@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 
 const DEFAULT_COLUMNS = [
@@ -94,7 +94,8 @@ export default function CaseList() {
 
   // Search & Filter state
   const [searchText, setSearchText] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('All');
+  const [searchParams] = useSearchParams();
+  const [selectedStatus, setSelectedStatus] = useState(searchParams.get('status') || 'All');
   const [selectedForum, setSelectedForum] = useState('All');
   const [selectedYear, setSelectedYear] = useState('All');
   const [selectedRailway, setSelectedRailway] = useState('All');

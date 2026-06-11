@@ -185,6 +185,7 @@ export const api = {
     return request(`/alerts${qs ? `?${qs}` : ''}`);
   },
   markAlertAsRead: (id) => request(`/alerts/${id}/read`, { method: 'PUT' }),
+  dismissAllAlerts: () => request('/alerts/read-all', { method: 'PUT' }),
   triggerCrawl: () => requestWithAi('/cases/trigger-crawl', { method: 'POST' }),
   checkDueCases: () => requestWithAi('/cases/check-due-cases', { method: 'POST' }),
 };
