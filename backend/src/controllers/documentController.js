@@ -49,6 +49,15 @@ exports.uploadDocument = (req, res) => {
       [caseId, filename, req.file.originalname, req.file.mimetype, req.file.size, storagePath, req.user?.id || 'system']
     );
 
+    const auditService = require('../services/auditService');
+    auditService.logAudit({
+      userId: req.user?.id,
+      action: 'UPLOAD_DOCUMENT',
+      targetType: 'document',
+      targetId: result.id,
+      details: { case_id: caseId, original_name: req.file.originalname, uploaded_by: req.user?.id },
+    });
+
     logger.info({ caseId, filename: req.file.originalname }, 'Document archived');
     res.status(201).json({
       id: result.id,

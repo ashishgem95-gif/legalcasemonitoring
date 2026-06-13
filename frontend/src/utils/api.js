@@ -149,6 +149,11 @@ export const api = {
     formData.append('file', file);
     return requestWithAi('/extract-pdf', { method: 'POST', body: formData });
   },
+  generateDraftReply: ({ caseType, uploadedText, precedents, customInstructions, promptOverride }) =>
+    requestWithAi('/ai/draft-reply', { 
+      method: 'POST', 
+      body: { caseType, uploadedText, precedents, customInstructions, promptOverride } 
+    }),
 
   // Personnel
   getPersonnel: () => request('/personnel'),
@@ -195,6 +200,9 @@ export const api = {
   checkDueCases: () => requestWithAi('/cases/check-due-cases', { method: 'POST' }),
   smartSync: () => requestWithAi('/sync/smart', { method: 'POST' }),
   resyncCase: (caseId) => request(`/sync/case/${caseId}`, { method: 'POST' }),
+
+  getFileActivity: () => request('/admin/file-activity'),
+  markAlertsSeen: () => request('/admin/file-activity/seen', { method: 'POST' }),
 };
 
 export default api;

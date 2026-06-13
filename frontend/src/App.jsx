@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import Home from './components/Home';
 import CaseList from './components/CaseList';
 import CaseDetail from './components/CaseDetail';
@@ -8,6 +8,8 @@ import Reminders from './components/Reminders';
 import Citations from './components/Citations';
 import FileRegistryApp from './components/FileRegistryApp';
 import Login from './components/Login';
+import AiDraftReply from './components/AiDraftReply';
+import FileActivityAlerts from './components/FileActivityAlerts';
 import api from './utils/api';
 
 
@@ -80,7 +82,8 @@ function DarkToggle() {
 
 function Header({ user, onLogout }) {
   const location = useLocation();
-  
+  const isAdmin = user && (user.id === 'admin' || (user.role && user.role.includes('Super Admin')));
+
   return (
     <header className="app-header">
       {/* Saffron, White, Green Tri-color Stripe */}
@@ -159,15 +162,25 @@ function Header({ user, onLogout }) {
             >
               अनुस्मारक / Deadlines & Reminders
             </Link>
-            <Link 
-              to="/citations" 
-              className={`nav-link ${location.pathname === '/citations' ? 'active' : ''}`}
-            >
-              कानूनी उद्धरण / Legal Citations
-            </Link>
-            {user && (user.id === 'admin' || (user.role && user.role.includes('Super Admin'))) && (
-              <Link 
-                to="/file-registry" 
+            {isAdmin && (
+              <Link
+                to="/citations"
+                className={`nav-link ${location.pathname === '/citations' ? 'active' : ''}`}
+              >
+                कानूनी उद्धरण / Legal Citations
+              </Link>
+            )}
+            {isAdmin && (
+              <Link
+                to="/ai-draft"
+                className={`nav-link ${location.pathname === '/ai-draft' ? 'active' : ''}`}
+              >
+                ✨ AI Draft
+              </Link>
+            )}
+            {isAdmin && (
+              <Link
+                to="/file-registry"
                 className={`nav-link ${location.pathname.startsWith('/file-registry') ? 'active' : ''}`}
               >
                 फाइल संचलन पंजी / File Registry
@@ -200,6 +213,8 @@ export default function App() {
     }
   });
 
+  const isAdmin = user && (user.id === 'admin' || (user.role && user.role.includes('Super Admin')));
+
   const handleLogout = () => {
     api.logout();
   };
@@ -231,6 +246,7 @@ export default function App() {
   return (
     <Router>
       <div className="app-container">
+        <FileActivityAlerts user={user} />
         <Header user={user} onLogout={handleLogout} />
         <main className="main-content">
           <Routes>
@@ -240,8 +256,9 @@ export default function App() {
             <Route path="/cases/:id" element={<CaseDetail />} />
             <Route path="/cases/:id/edit" element={<CaseForm />} />
             <Route path="/reminders" element={<Reminders />} />
-            <Route path="/citations" element={<Citations />} />
-            <Route path="/file-registry/*" element={user && (user.id === 'admin' || (user.role && user.role.includes('Super Admin'))) ? <FileRegistryApp /> : <Home />} />
+            <Route path="/citations" element={isAdmin ? <Citations /> : <Navigate to="/" replace />} />
+            <Route path="/ai-draft" element={isAdmin ? <AiDraftReply /> : <Navigate to="/" replace />} />
+            <Route path="/file-registry/*" element={isAdmin ? <FileRegistryApp /> : <Navigate to="/" replace />} />
             <Route path="*" element={<div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
               <h2 style={{ color: '#0f2c59', fontFamily: 'Outfit' }}>404 - Page Not Found</h2>
               <p style={{ color: '#6b7280' }}>The page you are looking for does not exist.</p>

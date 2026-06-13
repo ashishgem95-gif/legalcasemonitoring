@@ -4,6 +4,8 @@ const multer = require('multer');
 const rateLimit = require('express-rate-limit');
 const { authenticateToken, enforceScope, enforceScopeBody, requireRole } = require('../middleware/auth');
 const { validate, caseSchema, hearingSchema, citationSchema, personnelSchema, physicalFileSchema, bulkOperationSchema, viewPresetSchema } = require('../config/validator');
+const { logger } = require('../config/logger');
+const { generateReply } = require('../services/promptService');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -130,5 +132,50 @@ router.post('/sync/orders', syncLimiter, triggerOrderSync);
 router.post('/sync/smart', syncLimiter, triggerSmartSync);
 router.post('/sync/case/:id', syncLimiter, resyncSingleCase);
 router.get('/sync/status', getSyncStatus);
+
+// ── AI Affidavit Drafting ──
+router.post('/ai/draft-reply',
+  requireRole('Super Admin / Central Legal Cell', 'admin'),
+  async (req, res) => {
+    try {
+      const { caseType, uploadedText, precedents, customInstructions, promptOverride } = req.body || {};
+      if (!uploadedText || !uploadedText.trim()) {
+        return res.status(400).json({ error: 'uploadedText is required' });
+      }
+      if (!Array.isArray(precedents)) {
+        return res.status(400).json({ error: 'precedents must be an array' });
+      }
+      if (precedents.length > 20) {
+        return res.status(400).json({ error: 'Maximum 20 precedents allowed' });
+      }
+      const result = await generateReply({
+        provider: req.headers['x-ai-provider'],
+        model: req.headers['x-ai-model'],
+        apiKey: req.headers['x-ai-api-key'],
+        caseType,
+        uploadedText,
+        precedents,
+        customInstructions,
+        promptOverride,
+      });
+      res.json(result);
+    } catch (err) {
+      logger.error({ error: err.message, stack: err.stack }, 'Draft generation failed');
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+
+const { getFileActivity, markAlertsSeen } = require('../controllers/adminController');
+
+router.get('/admin/file-activity',
+  requireRole('Super Admin / Central Legal Cell', 'admin'),
+  getFileActivity
+);
+
+router.post('/admin/file-activity/seen',
+  requireRole('Super Admin / Central Legal Cell', 'admin'),
+  markAlertsSeen
+);
 
 module.exports = router;
