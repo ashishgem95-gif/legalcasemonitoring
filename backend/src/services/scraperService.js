@@ -49,11 +49,44 @@ async function fetchPageText(url) {
     }
 
     const html = await response.text();
-    return stripHtmlTags(html);
+    return { text: stripHtmlTags(html), html };
   } catch (err) {
     console.error(`Error fetching case url: ${url}`, err.message);
     throw err;
   }
+}
+
+function extractPdfLinksWithNearbyDates(html, baseUrl) {
+  if (!html) return [];
+  const pdfs = [];
+  const datePattern = /\b(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})\b/;
+  const linkRegex = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+  while ((match = linkRegex.exec(html)) !== null) {
+    const href = match[1];
+    if (!href) continue;
+    if (!/\.pdf(?:$|[?#])|qrpdfview|pdf\.php|view_daily_order/i.test(href)) continue;
+    const label = stripHtmlTags(match[2]).trim() || 'Court Order';
+    const start = Math.max(0, match.index - 200);
+    const end = Math.min(html.length, match.index + match[0].length + 200);
+    const context = html.substring(start, end);
+    let date = null;
+    const dateMatch = context.match(datePattern);
+    if (dateMatch) {
+      const day = parseInt(dateMatch[1], 10);
+      const month = parseInt(dateMatch[2], 10);
+      const year = dateMatch[3];
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+        date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
+    }
+    let resolvedUrl = href;
+    if (baseUrl && !/^https?:\/\//i.test(href)) {
+      try { resolvedUrl = new URL(href, baseUrl).toString(); } catch (e) {}
+    }
+    pdfs.push({ url: resolvedUrl, date, label });
+  }
+  return pdfs;
 }
 
 function parseDateString(dateStr) {
@@ -238,7 +271,7 @@ async function checkCaseLinks(headers = {}, dueOnly = false) {
     async function processCase(c) {
       try {
         console.log(`[Scraper] Checking link for Case: ${c.case_ref_no} (${c.court_link})...`);
-        const text = await withRetry(() => fetchPageText(c.court_link), c.id);
+        const { text, html } = await withRetry(() => fetchPageText(c.court_link), c.id);
         const hash = calculateHash(text);
 
         if (!c.last_fetched_hash) {
@@ -254,6 +287,7 @@ async function checkCaseLinks(headers = {}, dueOnly = false) {
 
         console.log(`[Scraper] Changes detected on page for ${c.case_ref_no}. Running parser...`);
         const parsed = await parseCourtPage(c, text, headers);
+        const pdfs = extractPdfLinksWithNearbyDates(html, c.court_link);
 
         const updateTransaction = db.transaction(() => {
           db.prepare('UPDATE cases SET last_fetched_hash = ?, last_fetched_at = CURRENT_TIMESTAMP WHERE id = ?').run(hash, c.id);
@@ -292,6 +326,18 @@ async function checkCaseLinks(headers = {}, dueOnly = false) {
 
           const alertMsg = `New order/updates detected: ${parsed.order_summary || 'New hearing/judgment details generated.'}`;
           db.prepare('INSERT INTO case_alerts (case_id, message) VALUES (?, ?)').run(c.id, alertMsg);
+
+          const seenPdfs = new Set();
+          for (const pdf of pdfs) {
+            if (!pdf.url || seenPdfs.has(pdf.url)) continue;
+            seenPdfs.add(pdf.url);
+            const existing = db.prepare('SELECT id FROM case_documents WHERE case_id = ? AND storage_path = ?').get(c.id, pdf.url);
+            if (existing) continue;
+            const fname = pdf.date ? `order_${pdf.date}.pdf` : `order_${Date.now()}.pdf`;
+            const origName = pdf.date ? `${pdf.label} dated ${pdf.date} — ${c.case_ref_no}` : `${pdf.label} — ${c.case_ref_no}`;
+            db.prepare(`INSERT INTO case_documents (case_id, filename, original_name, mime_type, storage_path, uploaded_by) VALUES (?, ?, ?, 'application/pdf', ?, 'scraper-service')`)
+              .run(c.id, fname, origName, pdf.url);
+          }
 
           return { checked: true, alert: true };
         });

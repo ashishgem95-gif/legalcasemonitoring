@@ -37,6 +37,9 @@ export default function CaseDetail() {
   const [progressError, setProgressError] = useState(null);
   const [progressSuccess, setProgressSuccess] = useState(false);
 
+  const [resyncing, setResyncing] = useState(false);
+  const [resyncMessage, setResyncMessage] = useState('');
+
   // Original Tribunal Progression (OA Details) Edit States
   const [isEditTribunalOpen, setIsEditTribunalOpen] = useState(false);
   const [tribunalData, setTribunalData] = useState({
@@ -186,6 +189,28 @@ export default function CaseDetail() {
       setProgressError(err.message || 'Failed to save progress details.');
     } finally {
       setProgressSaving(false);
+    }
+  };
+
+  const handleResync = async () => {
+    if (!window.confirm('Re-sync this case from CAT website? This will fetch the latest hearing data and may take 10-30 seconds. Continue?')) return;
+    setResyncing(true);
+    setResyncMessage('🔄 Connecting to CAT website...');
+
+    try {
+      setResyncMessage('🔄 Fetching latest hearings and orders...');
+      const result = await api.resyncCase(caseObj.id);
+
+      setResyncMessage(`✅ ${result.hearingsAdded || 0} hearings, ${result.pdfsAdded || 0} PDFs added. Status: ${result.status}`);
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      setResyncMessage('❌ Re-sync failed: ' + err.message);
+      setTimeout(() => setResyncMessage(''), 5000);
+    } finally {
+      setResyncing(false);
     }
   };
 
@@ -373,7 +398,49 @@ export default function CaseDetail() {
             </svg>
             Delete Case
           </button>
+          {caseObj.forum && caseObj.forum.toUpperCase().includes('CAT') && (
+            <button
+              onClick={handleResync}
+              disabled={resyncing}
+              style={{
+                background: resyncing ? '#9ca3af' : 'linear-gradient(135deg, #0f2c59 0%, #1e3a8a 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '0.5rem 1rem',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                cursor: resyncing ? 'wait' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}
+            >
+              {resyncing ? (
+                <>
+                  <div style={{ width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  Syncing from CAT...
+                </>
+              ) : (
+                <>🔄 Re-sync from CAT</>
+              )}
+            </button>
+          )}
         </div>
+        {resyncMessage && (
+          <div style={{
+            background: resyncMessage.startsWith('❌') ? '#fef2f2' : resyncMessage.startsWith('✅') ? '#ecfdf5' : '#eff6ff',
+            border: `1px solid ${resyncMessage.startsWith('❌') ? '#fecaca' : resyncMessage.startsWith('✅') ? '#a7f3d0' : '#bfdbfe'}`,
+            color: resyncMessage.startsWith('❌') ? '#991b1b' : resyncMessage.startsWith('✅') ? '#065f46' : '#1e40af',
+            borderRadius: '8px',
+            padding: '0.75rem 1rem',
+            marginTop: '1rem',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+          }}>
+            {resyncMessage}
+          </div>
+        )}
       </div>
 
       <div className="case-details-layout">

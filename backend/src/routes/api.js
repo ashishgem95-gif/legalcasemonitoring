@@ -123,11 +123,12 @@ const { getAuditLog } = require('../controllers/auditLogController');
 router.get('/audit-log', requireRole('Super Admin / Central Legal Cell', 'admin'), getAuditLog);
 
 // ── Batch Sync ──
-const { triggerBatchSync, triggerPlaywrightSync, triggerOrderSync, triggerSmartSync, getSyncStatus } = require('../controllers/syncController');
+const { triggerBatchSync, triggerPlaywrightSync, triggerOrderSync, triggerSmartSync, getSyncStatus, resyncSingleCase } = require('../controllers/syncController');
 router.post('/sync/start', syncLimiter, triggerBatchSync);
 router.post('/sync/playwright', syncLimiter, triggerPlaywrightSync);
 router.post('/sync/orders', syncLimiter, triggerOrderSync);
 router.post('/sync/smart', syncLimiter, triggerSmartSync);
+router.post('/sync/case/:id', syncLimiter, resyncSingleCase);
 router.get('/sync/status', getSyncStatus);
 
 module.exports = router;

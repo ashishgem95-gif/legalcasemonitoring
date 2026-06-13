@@ -72,7 +72,7 @@ function parseDailyOrders(html) {
     if (texts.some(t => t.includes('Final Order') || t.includes('Daily Orders'))) {
       inOrderSection = true; continue;
     }
-    if (!inOrderSection && texts.length >= 4 && /^\d+$/.test(texts[0])) {
+    if (texts.length >= 4 && /^\d+$/.test(texts[0])) {
       const date = parseDate(texts[1]);
       if (date) {
         result.hearings.push({
@@ -156,10 +156,15 @@ async function checkCase(c) {
       }
 
       if (orders.hearings.length > 0) {
-        const latestWithNext = orders.hearings.find(h => h.nextDate);
+        const sorted = [...orders.hearings].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        const latestWithNext = sorted.find(h => h.nextDate);
         if (latestWithNext?.nextDate) {
-          db.prepare('UPDATE cases SET next_hearing_date = ? WHERE id = ?').run(latestWithNext.nextDate, c.id);
-          result.newNextDate = latestWithNext.nextDate;
+          const currentNext = get('SELECT next_hearing_date FROM cases WHERE id = ?', [c.id]);
+          if (!currentNext?.next_hearing_date || latestWithNext.nextDate > currentNext.next_hearing_date) {
+            db.prepare('UPDATE cases SET next_hearing_date = ? WHERE id = ?').run(latestWithNext.nextDate, c.id);
+            result.newNextDate = latestWithNext.nextDate;
+            logger.info({ case: c.case_ref_no, from: currentNext?.next_hearing_date, to: latestWithNext.nextDate, hearingDate: latestWithNext.date }, 'Updated next_hearing_date');
+          }
         }
       }
 
@@ -221,4 +226,12 @@ async function runSmartSync() {
   return results;
 }
 
-module.exports = { runSmartSync };
+async function runSmartSyncForCase(caseId) {
+  const caseRecord = get('SELECT * FROM cases WHERE id = ?', [caseId]);
+  if (!caseRecord) {
+    return { status: 'not_found', error: `Case ${caseId} not found` };
+  }
+  return await checkCase(caseRecord);
+}
+
+module.exports = { runSmartSync, runSmartSyncForCase };

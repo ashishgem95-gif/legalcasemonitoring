@@ -133,3 +133,31 @@ exports.triggerSmartSync = async (req, res) => {
 exports.getSyncStatus = (req, res) => {
   res.json(syncState);
 };
+
+// POST /api/sync/case/:id — Per-case re-sync
+exports.resyncSingleCase = async (req, res) => {
+  const caseId = parseInt(req.params.id);
+  if (!caseId || isNaN(caseId)) {
+    return res.status(400).json({ error: 'Valid case ID is required' });
+  }
+
+  try {
+    const { runSmartSyncForCase } = require('../services/smartSync');
+    const { get } = require('../config/dbHelper');
+
+    const caseRecord = get('SELECT id, railway, case_ref_no FROM cases WHERE id = ?', [caseId]);
+    if (!caseRecord) {
+      return res.status(404).json({ error: `Case ${caseId} not found` });
+    }
+
+    if (req.user && req.user.railwayScope !== 'All' && caseRecord.railway !== req.user.railwayScope) {
+      return res.status(403).json({ error: 'Access denied to this case.' });
+    }
+
+    const result = await runSmartSyncForCase(caseId);
+    res.json({ status: 'success', caseId, caseRefNo: caseRecord.case_ref_no, ...result });
+  } catch (err) {
+    logger.error({ caseId, error: err.message }, 'Re-sync failed');
+    res.status(500).json({ error: 'Re-sync failed: ' + err.message });
+  }
+};

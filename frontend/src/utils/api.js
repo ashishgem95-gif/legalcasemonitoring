@@ -194,6 +194,7 @@ export const api = {
   triggerCrawl: () => requestWithAi('/cases/trigger-crawl', { method: 'POST' }),
   checkDueCases: () => requestWithAi('/cases/check-due-cases', { method: 'POST' }),
   smartSync: () => requestWithAi('/sync/smart', { method: 'POST' }),
+  resyncCase: (caseId) => request(`/sync/case/${caseId}`, { method: 'POST' }),
 };
 
 export default api;
