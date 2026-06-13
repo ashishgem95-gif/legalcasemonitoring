@@ -1,8 +1,6 @@
 node_modules/
 .env
-*.db
 dist/
 .vite/
-legal_tracker.db*
 .tmp_hc_*
 .DS_Store
