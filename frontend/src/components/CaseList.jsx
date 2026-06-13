@@ -97,9 +97,9 @@ export default function CaseList() {
   const [searchText, setSearchText] = useState('');
   const [searchParams] = useSearchParams();
   const [selectedStatus, setSelectedStatus] = useState(searchParams.get('status') || 'All');
-  const [selectedForum, setSelectedForum] = useState('All');
-  const [selectedYear, setSelectedYear] = useState('All');
-  const [selectedRailway, setSelectedRailway] = useState('All');
+  const [selectedForum, setSelectedForum] = useState(searchParams.get('forum') || 'All');
+  const [selectedYear, setSelectedYear] = useState(searchParams.get('year') || 'All');
+  const [selectedRailway, setSelectedRailway] = useState(searchParams.get('railway') || 'All');
 
   // Sort state
   const [sortCol, setSortCol] = useState(null);
@@ -142,14 +142,17 @@ export default function CaseList() {
   const uniqueRailways = ['All', ...new Set(cases.map(c => c.railway).filter(Boolean))];
 
   const filteredCases = cases.filter(c => {
-    // 1. Text Search
-    const matchesSearch = searchText === '' || 
-      (c.case_ref_no && c.case_ref_no.toLowerCase().includes(searchText.toLowerCase())) ||
-      (c.applicant && c.applicant.toLowerCase().includes(searchText.toLowerCase())) ||
-      (c.respondent && c.respondent.toLowerCase().includes(searchText.toLowerCase())) ||
-      (c.synopsis && c.synopsis.toLowerCase().includes(searchText.toLowerCase())) ||
-      (c.file_no && c.file_no.toLowerCase().includes(searchText.toLowerCase())) ||
-      (c.employee_designation && c.employee_designation.toLowerCase().includes(searchText.toLowerCase()));
+    const q = searchText.trim().toLowerCase();
+    let matchesSearch = q === '';
+    if (q !== '') {
+      const haystack = [
+        c.case_ref_no, c.applicant, c.respondent, c.synopsis, c.file_no,
+        c.employee_designation, c.forum, c.railway, c.present_status,
+        c.case_number, c.case_year, c.advocate_name, c.nodal_officer_name,
+        c.link_file_no, c.original_oa_no,
+      ].filter(Boolean).join(' ').toLowerCase();
+      matchesSearch = haystack.includes(q);
+    }
 
     // 2. Status
     let matchesStatus = true;
@@ -176,7 +179,7 @@ export default function CaseList() {
   });
 
   // Sort
-  const colToField = { year: 'case_year', caseNumber: 'case_number', caseType: 'case_type', railway: 'railway', forum: 'forum', status: 'present_status', doh: 'next_hearing_date', nextHearing: 'next_hearing_date', replyFiled: 'date_filing_reply', fileNo: 'file_no', designation: 'employee_designation' };
+  const colToField = { year: 'case_year', caseNumber: 'case_number', caseType: 'case_type', railway: 'railway', forum: 'forum', status: 'present_status', doh: 'next_hearing_date', nextHearing: 'next_hearing_date', replyFiled: 'date_filing_reply', fileNo: 'file_no', designation: 'employee_designation', name: 'applicant', issue: 'synopsis', courtLink: 'court_link', linkFileNo: 'link_file_no' };
   const sortedCases = sortCol ? [...filteredCases].sort((a, b) => {
     const field = colToField[sortCol] || sortCol;
     const va = a[field] || '', vb = b[field] || '';
@@ -193,6 +196,17 @@ export default function CaseList() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchText, selectedStatus, selectedForum, selectedYear, selectedRailway]);
+
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const forum = searchParams.get('forum');
+    const year = searchParams.get('year');
+    const railway = searchParams.get('railway');
+    if (status) setSelectedStatus(status);
+    if (forum) setSelectedForum(forum);
+    if (year) setSelectedYear(year);
+    if (railway) setSelectedRailway(railway);
+  }, [searchParams]);
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -287,6 +301,27 @@ export default function CaseList() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Search Results Counter */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <span style={{ fontSize: '0.85rem', color: '#374151', fontWeight: 600 }}>
+          {(searchText.trim() || selectedStatus !== 'All' || selectedForum !== 'All' || selectedYear !== 'All' || selectedRailway !== 'All') ? (
+            <>Showing <span style={{ color: '#0f2c59' }}>{filteredCases.length}</span> of {cases.length} cases
+            {searchText.trim() && <span style={{ color: '#6b7280' }}> matching "{searchText.trim()}"</span>}
+            </>
+          ) : (
+            <>Showing all <span style={{ color: '#0f2c59' }}>{cases.length}</span> cases</>
+          )}
+        </span>
+        {(searchText.trim() || selectedStatus !== 'All' || selectedForum !== 'All' || selectedYear !== 'All' || selectedRailway !== 'All') && (
+          <button
+            onClick={() => { setSearchText(''); setSelectedStatus('All'); setSelectedForum('All'); setSelectedYear('All'); setSelectedRailway('All'); setCurrentPage(1); }}
+            style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', background: '#fff', border: '1px solid #d1d5db', color: '#374151', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+          >
+            Clear All
+          </button>
+        )}
       </div>
 
       {/* Spreadsheet grid */}

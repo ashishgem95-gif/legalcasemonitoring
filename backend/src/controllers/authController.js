@@ -15,7 +15,7 @@ function login(req, res) {
   try {
     const user = get(
       'SELECT * FROM users WHERE email = ? OR id = ?',
-      [email.toLowerCase().trim(), email.toLowerCase().trim()]
+      [email.toLowerCase().trim(), email.trim()]
     );
 
     if (!user) {
@@ -58,7 +58,7 @@ function login(req, res) {
         email: user.email,
         role: user.role,
         railwayScope: user.railway_scope,
-        desc: user.desc
+        desc: user.description
       }
     });
   } catch (err) {

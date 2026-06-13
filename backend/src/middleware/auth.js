@@ -34,7 +34,7 @@ function authenticateToken(req, res, next) {
       email: row.email,
       role: row.role,
       railwayScope: row.railway_scope,
-      desc: row.desc
+      desc: row.description
     };
 
     next();
@@ -44,4 +44,29 @@ function authenticateToken(req, res, next) {
   }
 }
 
-module.exports = { authenticateToken };
+function enforceScope(req, res, next) {
+  if (req.user && req.user.railwayScope !== 'All') {
+    req._railwayScope = req.user.railwayScope;
+  }
+  next();
+}
+
+function enforceScopeBody(req, res, next) {
+  if (req.user && req.user.railwayScope !== 'All' && req.body && req.body.railway) {
+    if (req.body.railway !== req.user.railwayScope) {
+      return res.status(403).json({ error: 'Cannot create/modify cases for other railway zones.' });
+    }
+  }
+  next();
+}
+
+function requireRole(...allowedRoles) {
+  return (req, res, next) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Insufficient permissions.' });
+    }
+    next();
+  };
+}
+
+module.exports = { authenticateToken, enforceScope, enforceScopeBody, requireRole };

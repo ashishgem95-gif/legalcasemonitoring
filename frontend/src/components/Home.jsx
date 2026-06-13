@@ -54,12 +54,15 @@ export default function Home() {
     }, 6000);
   };
 
+  const timerRef = useRef(null);
+
   const triggerDueCasesCheck = async () => {
     try {
       setScanning(true);
       setScanStatus('Checking past-due court cases...');
       await api.checkDueCases();
-      setTimeout(async () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(async () => {
         await fetchAlerts();
         await fetchCases();
         setScanStatus('');
@@ -71,6 +74,10 @@ export default function Home() {
       setScanning(false);
     }
   };
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
 
   const [syncResult, setSyncResult] = useState(null);
 
@@ -162,9 +169,6 @@ export default function Home() {
     const f = forum.toUpperCase();
     if (f.startsWith('CAT')) {
       return { name: 'CAT (Central Administrative Tribunal)', url: 'https://cat.gov.in/' };
-    }
-    if (f.startsWith('HC/DELHI') || f.includes('DELHI')) {
-      return { name: 'Delhi High Court', url: 'https://delhihighcourt.nic.in/' };
     }
     if (f.startsWith('HC/PATNA') || f.includes('PATNA')) {
       return { name: 'Patna High Court', url: 'http://patnahighcourt.gov.in/' };
@@ -511,8 +515,8 @@ export default function Home() {
                 const u = JSON.parse(localStorage.getItem('user') || '{}');
                 if (u.railwayScope) navigate(`/cases?railway=${u.railwayScope}`);
               } else if (chip.status) navigate(`/cases?status=${chip.status}`);
-              else if (chip.forum) navigate('/cases');
-              else if (chip.days) navigate('/cases');
+              else if (chip.days) navigate(`/cases?days=${chip.days}`);
+              else if (chip.forum) navigate(`/cases?forum=${chip.forum}`);
             }}
             style={{ borderColor: chip.color, color: chip.color, fontWeight: 600 }}>
             {chip.label}

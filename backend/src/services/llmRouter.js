@@ -4,6 +4,7 @@ const https = require('https');
  * Helper to perform HTTPS request and return response body as text.
  */
 async function makeRequest(url, options, body) {
+  const TIMEOUT_MS = 30000;
   return new Promise((resolve, reject) => {
     const urlObj = new URL(url);
     const reqOptions = {
@@ -15,10 +16,9 @@ async function makeRequest(url, options, body) {
 
     const req = https.request(reqOptions, (res) => {
       let data = '';
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
+      res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
+        clearTimeout(timer);
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(data);
         } else {
@@ -28,8 +28,13 @@ async function makeRequest(url, options, body) {
     });
 
     req.on('error', (err) => {
+      clearTimeout(timer);
       reject(err);
     });
+
+    const timer = setTimeout(() => {
+      req.destroy(new Error('LLM request timeout after 30s'));
+    }, TIMEOUT_MS);
 
     if (body) {
       req.write(typeof body === 'string' ? body : JSON.stringify(body));

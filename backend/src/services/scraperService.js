@@ -1,6 +1,18 @@
 const crypto = require('crypto');
 const { run, get, all } = require('../config/dbHelper');
+const { db } = require('../config/database');
 const { callLLM } = require('./llmRouter');
+const { VALID_STAGES, STAGE_COLUMN_MAP } = require('../config/constants');
+
+let syncInProgress = false;
+
+function isSyncInProgress() {
+  return syncInProgress;
+}
+
+function setSyncLock(locked) {
+  syncInProgress = locked;
+}
 
 function stripHtmlTags(html) {
   if (!html) return '';
@@ -193,6 +205,12 @@ async function withRetry(fn, caseId, attempt = 0) {
 }
 
 async function checkCaseLinks(headers = {}, dueOnly = false) {
+  if (syncInProgress) {
+    console.log('[Scraper] Sync already in progress, skipping.');
+    return { checkedCount: 0, newAlertsCount: 0, skipped: true };
+  }
+
+  syncInProgress = true;
   console.log(`[Scraper] Starting court link crawler update cycle. dueOnly: ${dueOnly}`);
   let checkedCount = 0;
   let newAlertsCount = 0;
@@ -237,52 +255,52 @@ async function checkCaseLinks(headers = {}, dueOnly = false) {
         console.log(`[Scraper] Changes detected on page for ${c.case_ref_no}. Running parser...`);
         const parsed = await parseCourtPage(c, text, headers);
 
-        run('UPDATE cases SET last_fetched_hash = ?, last_fetched_at = CURRENT_TIMESTAMP WHERE id = ?', [hash, c.id]);
+        const updateTransaction = db.transaction(() => {
+          db.prepare('UPDATE cases SET last_fetched_hash = ?, last_fetched_at = CURRENT_TIMESTAMP WHERE id = ?').run(hash, c.id);
 
-        if (!parsed || !parsed.order_found) {
-          console.log(`[Scraper] No specific order found in update for ${c.case_ref_no}`);
-          return { checked: true, alert: false };
-        }
-
-        if (parsed.order_date) {
-          const existingHearing = get('SELECT id FROM hearing_history WHERE case_id = ? AND hearing_date = ?', [c.id, parsed.order_date]);
-          if (!existingHearing) {
-            run('INSERT INTO hearing_history (case_id, hearing_date, order_summary, order_raw_text) VALUES (?, ?, ?, ?)',
-              [c.id, parsed.order_date, parsed.order_summary, parsed.order_raw_text]);
-          } else {
-            run('UPDATE hearing_history SET order_summary = ?, order_raw_text = ? WHERE id = ?',
-              [parsed.order_summary, parsed.order_raw_text, existingHearing.id]);
+          if (!parsed || !parsed.order_found) {
+            return { checked: true, alert: false };
           }
-        }
 
-        if (parsed.next_hearing_date) {
-          const existingFuture = get('SELECT id FROM hearing_history WHERE case_id = ? AND hearing_date = ?', [c.id, parsed.next_hearing_date]);
-          if (!existingFuture) {
-            run('INSERT INTO hearing_history (case_id, hearing_date, order_summary, order_raw_text) VALUES (?, ?, ?, ?)',
-              [c.id, parsed.next_hearing_date, 'Future scheduled hearing date extracted from court website.', 'System-generated reminder.']);
+          if (parsed.order_date) {
+            const stmt = db.prepare('INSERT OR IGNORE INTO hearing_history (case_id, hearing_date, order_summary, order_raw_text) VALUES (?, ?, ?, ?)');
+            const info = stmt.run(c.id, parsed.order_date, parsed.order_summary, parsed.order_raw_text);
+            if (info.changes === 0) {
+              db.prepare(`UPDATE hearing_history SET order_summary = ?, order_raw_text = ?
+                WHERE case_id = ? AND hearing_date = ?
+                AND (order_summary = '' OR order_summary LIKE 'System-generated%' OR order_summary IS NULL)`)
+                .run(parsed.order_summary, parsed.order_raw_text, c.id, parsed.order_date);
+            }
           }
-        }
 
-        if (parsed.case_status) {
-          run('UPDATE cases SET present_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [parsed.case_status, c.id]);
-        }
+          if (parsed.next_hearing_date) {
+            db.prepare('INSERT OR IGNORE INTO hearing_history (case_id, hearing_date, order_summary, order_raw_text) VALUES (?, ?, ?, ?)')
+              .run(c.id, parsed.next_hearing_date, 'Future scheduled hearing date extracted from court website.', 'System-generated reminder.');
+          }
 
-        const VALID_STAGES = [
-          'charge_sheet_issued', 'reply_to_charges', 'inquiry_commenced',
-          'io_report_submitted', 'da_notice', 'reply_to_da_notice',
-          'da_penalty_order', 'upsc_advice', 'appeal_oa_filed',
-          'counter_affidavit_filed', 'cat_court_order', 'writ_petition_filed'
-        ];
-        if (parsed.progression_stage && VALID_STAGES.includes(parsed.progression_stage)) {
-          const stageDate = parsed.order_date || new Date().toISOString().split('T')[0];
-          run(`UPDATE cases SET ${parsed.progression_stage}_date = ?, ${parsed.progression_stage}_notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-            [stageDate, parsed.order_summary, c.id]);
-        }
+          if (parsed.case_status) {
+            db.prepare('UPDATE cases SET present_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(parsed.case_status, c.id);
+          }
 
-        const alertMsg = `New order/updates detected: ${parsed.order_summary || 'New hearing/judgment details generated.'}`;
-        run('INSERT INTO case_alerts (case_id, message) VALUES (?, ?)', [c.id, alertMsg]);
-        console.log(`[Scraper] 🚨 Alert triggered for ${c.case_ref_no}`);
-        return { checked: true, alert: true };
+          if (parsed.progression_stage && STAGE_COLUMN_MAP[parsed.progression_stage]) {
+            const cols = STAGE_COLUMN_MAP[parsed.progression_stage];
+            const stageDate = parsed.order_date || new Date().toISOString().split('T')[0];
+            db.prepare(`UPDATE cases SET ${cols.dateCol} = ?, ${cols.notesCol} = ?, updated_at = CURRENT_TIMESTAMP
+              WHERE id = ? AND ${cols.dateCol} IS NULL`)
+              .run(stageDate, parsed.order_summary, c.id);
+          }
+
+          const alertMsg = `New order/updates detected: ${parsed.order_summary || 'New hearing/judgment details generated.'}`;
+          db.prepare('INSERT INTO case_alerts (case_id, message) VALUES (?, ?)').run(c.id, alertMsg);
+
+          return { checked: true, alert: true };
+        });
+
+        const result = updateTransaction();
+        if (result.alert) {
+          console.log(`[Scraper] 🚨 Alert triggered for ${c.case_ref_no}`);
+        }
+        return result;
       } catch (caseErr) {
         console.error(`[Scraper] Failed checking link for case ID ${c.id}:`, caseErr.message);
         return { checked: false, alert: false };
@@ -302,17 +320,35 @@ async function checkCaseLinks(headers = {}, dueOnly = false) {
     }
   } catch (err) {
     console.error('[Scraper] Global scraper process error:', err);
+  } finally {
+    syncInProgress = false;
   }
 
   console.log(`[Scraper] Scan cycle complete. Checked: ${checkedCount}, Alerts generated: ${newAlertsCount}`);
   return { checkedCount, newAlertsCount };
 }
 
+let schedulerInterval = null;
+
 function initScheduler() {
+  if (process.env.AUTO_CRAWL_ON_START !== 'true') {
+    console.log('[Scraper] Auto-crawl on start disabled. Set AUTO_CRAWL_ON_START=true to enable.');
+    return;
+  }
   console.log('[Scraper] Initializing startup updates scan scheduler...');
   setTimeout(() => {
     checkCaseLinks().catch(err => console.error('[Scraper] Startup link check failed:', err));
   }, 5000);
+  schedulerInterval = setInterval(() => {
+    checkCaseLinks().catch(err => console.error('[Scraper] Scheduled link check failed:', err));
+  }, 6 * 60 * 60 * 1000);
 }
 
-module.exports = { checkCaseLinks, initScheduler };
+function stopScheduler() {
+  if (schedulerInterval) {
+    clearInterval(schedulerInterval);
+    schedulerInterval = null;
+  }
+}
+
+module.exports = { checkCaseLinks, initScheduler, isSyncInProgress, setSyncLock, stopScheduler };

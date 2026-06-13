@@ -69,6 +69,8 @@ db.exec(`
     cat_court_order_notes TEXT,
     writ_petition_filed_date DATE,
     writ_petition_filed_notes TEXT,
+    next_hearing_date DATE,
+    last_checked_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
@@ -86,6 +88,10 @@ db.exec(`
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
   );
+`);
+db.exec(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_hearing_case_date
+  ON hearing_history(case_id, hearing_date);
 `);
 console.log('hearing_history table verified/created.');
 
@@ -145,6 +151,25 @@ db.exec(`
   );
 `);
 console.log('case_affidavits table verified/created.');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS case_pleadings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    case_id INTEGER NOT NULL,
+    type VARCHAR NOT NULL,
+    filing_date DATE NOT NULL,
+    document_url VARCHAR,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
+  );
+`);
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_pleadings_case ON case_pleadings(case_id);
+`);
+console.log('case_pleadings table verified/created.');
+
+try { db.exec("ALTER TABLE users RENAME COLUMN desc TO description;"); } catch (e) { /* already renamed */ }
 
 // ── personnel ──
 db.exec(`
@@ -245,9 +270,6 @@ db.exec(`
 `);
 console.log('users table verified/created.');
 
-// Migration: add password_iterations to existing users table
-try { db.exec(`ALTER TABLE users ADD COLUMN password_iterations INTEGER DEFAULT 1000`); } catch (e) { /* column exists */ }
-
 const userCount = db.prepare('SELECT COUNT(*) AS count FROM users').get();
 if (userCount.count === 0) {
   console.log('Pre-seeding users database...');
@@ -285,24 +307,6 @@ const addColumn = (colName, colType) => {
   try { db.exec(`ALTER TABLE cases ADD COLUMN ${colName} ${colType}`); } catch (e) { /* duplicate */ }
 };
 
-addColumn('original_oa_no', 'VARCHAR');
-addColumn('original_oa_forum', 'VARCHAR');
-addColumn('original_oa_date_disposal', 'DATE');
-addColumn('original_oa_status', 'TEXT');
-addColumn('court_link', 'VARCHAR');
-addColumn('last_fetched_hash', 'VARCHAR');
-addColumn('last_fetched_at', 'TIMESTAMP');
-
-const stages = [
-  'charge_sheet_issued', 'reply_to_charges', 'inquiry_commenced',
-  'io_report_submitted', 'da_notice', 'reply_to_da_notice',
-  'da_penalty_order', 'upsc_advice', 'appeal_oa_filed',
-  'counter_affidavit_filed', 'cat_court_order', 'writ_petition_filed'
-];
-stages.forEach(stage => {
-  addColumn(`${stage}_date`, 'DATE');
-  addColumn(`${stage}_notes`, 'TEXT');
-});
 
 // ── audit_log ──
 db.exec(`
@@ -397,5 +401,31 @@ try {
 } catch (e) {
   console.log('FTS5 note:', e.message);
 }
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS ai_settings (
+    user_id VARCHAR PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    provider VARCHAR DEFAULT 'gemini',
+    model VARCHAR DEFAULT '',
+    api_key_encrypted VARCHAR,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+console.log('ai_settings table verified/created.');
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_cases_railway ON cases(railway);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_case_alerts_is_read ON case_alerts(is_read);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_case_alerts_case_id ON case_alerts(case_id);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_physical_files_currently_with_id ON physical_files(currently_with_id);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_file_movements_file_id ON file_movements(file_id);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_file_movements_to_custodian_id ON file_movements(to_custodian_id);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_view_presets_user_id ON view_presets(user_id);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_case_documents_case_id ON case_documents(case_id);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_case_affidavits_case_id ON case_affidavits(case_id);`);
+console.log('Performance indexes verified/created.');
 
 module.exports = { db, PASSWORD_ITERATIONS };

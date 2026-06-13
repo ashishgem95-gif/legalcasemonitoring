@@ -6,15 +6,29 @@ const { logger } = require('../config/logger');
 const STORAGE_DIR = path.resolve(__dirname, '..', '..', '..', 'document_archive');
 
 // Ensure storage directory exists
-if (!fs.existsSync(STORAGE_DIR)) {
-  fs.mkdirSync(STORAGE_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(STORAGE_DIR)) {
+    fs.mkdirSync(STORAGE_DIR, { recursive: true });
+  }
+} catch (err) {
+  console.error(`[DocumentController] Failed to create storage directory ${STORAGE_DIR}:`, err.message);
 }
 
 // POST /api/cases/:id/documents
 exports.uploadDocument = (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+      return res.status(400).json({ error: 'No file uploaded.' });
+    }
+
+    const allowedMimeTypes = ['application/pdf'];
+    if (!allowedMimeTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({ error: `Invalid file type. Only PDF files are allowed. Received: ${req.file.mimetype}` });
+    }
+
+    const MAX_FILE_SIZE = 20 * 1024 * 1024;
+    if (req.file.size > MAX_FILE_SIZE) {
+      return res.status(400).json({ error: `File too large. Maximum size is 20MB.` });
     }
 
     const caseId = req.params.id;

@@ -12,7 +12,10 @@ const getAlerts = async (req, res) => {
       WHERE a.is_read = 0
     `;
     const params = [];
-    if (railway) {
+    if (req._railwayScope) {
+      query += ' AND c.railway = ?';
+      params.push(req._railwayScope);
+    } else if (railway) {
       query += ' AND c.railway = ?';
       params.push(railway);
     }
@@ -75,7 +78,11 @@ const checkDueCases = async (req, res) => {
 
 const markAllAlertsAsRead = async (req, res) => {
   try {
-    run('UPDATE case_alerts SET is_read = 1 WHERE is_read = 0');
+    if (req._railwayScope) {
+      run(`UPDATE case_alerts SET is_read = 1 WHERE is_read = 0 AND case_id IN (SELECT id FROM cases WHERE railway = ?)`, [req._railwayScope]);
+    } else {
+      run('UPDATE case_alerts SET is_read = 1 WHERE is_read = 0');
+    }
     res.json({ message: 'All notifications dismissed.' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to dismiss notifications.' });

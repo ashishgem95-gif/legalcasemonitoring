@@ -23,9 +23,10 @@ exports.triggerBatchSync = async (req, res) => {
     });
   }
 
-  res.json({ status: 'started', message: 'Batch sync initiated.', startedAt: new Date().toISOString() });
-  // ... rest is same, runs in background
   syncState = { running: true, type: 'fetch', startedAt: new Date().toISOString(), completedAt: null, summary: null, progress: null };
+
+  res.json({ status: 'started', message: 'Batch sync initiated.', startedAt: syncState.startedAt });
+
   try {
     const result = await runBatchSync(req.body || {});
     syncState.running = false;

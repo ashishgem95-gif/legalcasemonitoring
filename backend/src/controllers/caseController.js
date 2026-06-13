@@ -1,5 +1,10 @@
 const { run, get, all } = require('../config/dbHelper');
 
+function checkCaseAccess(caseRecord, user) {
+  if (!user || user.railwayScope === 'All') return true;
+  return caseRecord.railway === user.railwayScope;
+}
+
 // GET /api/cases - List all cases, with optional search filter
 const getCases = async (req, res) => {
   try {
@@ -11,6 +16,14 @@ const getCases = async (req, res) => {
       WHERE 1=1
     `;
     const params = [];
+
+    if (req._railwayScope) {
+      query += ' AND c.railway = ?';
+      params.push(req._railwayScope);
+    } else if (railway) {
+      query += ' AND c.railway = ?';
+      params.push(railway);
+    }
 
     if (search) {
       query += ' AND (c.case_ref_no LIKE ? OR c.applicant LIKE ? OR c.respondent LIKE ? OR c.synopsis LIKE ? OR c.file_no LIKE ?)';
@@ -26,11 +39,6 @@ const getCases = async (req, res) => {
     if (case_type) {
       query += ' AND c.case_type = ?';
       params.push(case_type);
-    }
-
-    if (railway) {
-      query += ' AND c.railway = ?';
-      params.push(railway);
     }
 
     query += ' ORDER BY c.updated_at DESC, c.id DESC';
@@ -49,6 +57,9 @@ const getCaseById = async (req, res) => {
     const caseRecord = get('SELECT * FROM cases WHERE id = ?', [req.params.id]);
     if (!caseRecord) {
       return res.status(404).json({ error: 'Case not found.' });
+    }
+    if (!checkCaseAccess(caseRecord, req.user)) {
+      return res.status(403).json({ error: 'Access denied to this case.' });
     }
     res.json(caseRecord);
   } catch (err) {
@@ -92,7 +103,7 @@ const createCase = async (req, res) => {
       body.case_ref_no, body.railway || null, body.applicant || null,
       body.respondent || null, body.employee_designation || null,
       body.case_type || null, body.case_number || null,
-      body.case_year ? parseInt(body.case_year) : null,
+      body.case_year && !isNaN(Number(body.case_year)) ? parseInt(body.case_year) : null,
       body.forum || null, body.synopsis || null,
       body.file_no || null, body.link_file_no || null,
       body.last_date_reply || null, body.date_filing_reply || null,
@@ -133,9 +144,12 @@ const createCase = async (req, res) => {
 const updateCase = async (req, res) => {
   try {
     const caseId = req.params.id;
-    const existingCase = get('SELECT id FROM cases WHERE id = ?', [caseId]);
+    const existingCase = get('SELECT * FROM cases WHERE id = ?', [caseId]);
     if (!existingCase) {
       return res.status(404).json({ error: 'Case not found.' });
+    }
+    if (!checkCaseAccess(existingCase, req.user)) {
+      return res.status(403).json({ error: 'Access denied to modify this case.' });
     }
 
     const body = req.body;
@@ -176,7 +190,7 @@ const updateCase = async (req, res) => {
     const params = [
       body.case_ref_no, val('railway'), val('applicant'), val('respondent'),
       val('employee_designation'), val('case_type'), val('case_number'),
-      val('case_year') !== '' ? parseInt(val('case_year')) : null,
+      val('case_year') && !isNaN(Number(val('case_year'))) ? parseInt(val('case_year')) : null,
       val('forum'), val('synopsis'), val('file_no'),
       val('link_file_no'), val('last_date_reply'), val('date_filing_reply'),
       val('present_status', 'Pending'), val('last_date_appeal_implementation'),
@@ -215,9 +229,12 @@ const updateCase = async (req, res) => {
 // DELETE /api/cases/:id
 const deleteCase = async (req, res) => {
   try {
-    const existingCase = get('SELECT id FROM cases WHERE id = ?', [req.params.id]);
+    const existingCase = get('SELECT * FROM cases WHERE id = ?', [req.params.id]);
     if (!existingCase) {
       return res.status(404).json({ error: 'Case not found.' });
+    }
+    if (!checkCaseAccess(existingCase, req.user)) {
+      return res.status(403).json({ error: 'Access denied to delete this case.' });
     }
     run('DELETE FROM cases WHERE id = ?', [req.params.id]);
     res.json({ message: 'Case successfully deleted.' });

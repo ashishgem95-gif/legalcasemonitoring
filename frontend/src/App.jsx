@@ -165,7 +165,7 @@ function Header({ user, onLogout }) {
             >
               कानूनी उद्धरण / Legal Citations
             </Link>
-            {user && user.id === 'admin' && (
+            {user && (user.id === 'admin' || (user.role && user.role.includes('Super Admin'))) && (
               <Link 
                 to="/file-registry" 
                 className={`nav-link ${location.pathname.startsWith('/file-registry') ? 'active' : ''}`}
@@ -241,7 +241,12 @@ export default function App() {
             <Route path="/cases/:id/edit" element={<CaseForm />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/citations" element={<Citations />} />
-            <Route path="/file-registry/*" element={user && user.id === 'admin' ? <FileRegistryApp /> : <Home />} />
+            <Route path="/file-registry/*" element={user && (user.id === 'admin' || (user.role && user.role.includes('Super Admin'))) ? <FileRegistryApp /> : <Home />} />
+            <Route path="*" element={<div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+              <h2 style={{ color: '#0f2c59', fontFamily: 'Outfit' }}>404 - Page Not Found</h2>
+              <p style={{ color: '#6b7280' }}>The page you are looking for does not exist.</p>
+              <button onClick={() => window.history.back()} style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: '#0f2c59', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Go Back</button>
+            </div>} />
           </Routes>
         </main>
         

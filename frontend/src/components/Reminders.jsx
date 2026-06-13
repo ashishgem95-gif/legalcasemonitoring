@@ -6,235 +6,173 @@ export default function Reminders() {
   const navigate = useNavigate();
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [searchText, setSearchText] = useState('');
+  const [urgencyFilter, setUrgencyFilter] = useState('All');
 
-  useEffect(() => {
-    fetchCases();
-  }, []);
+  useEffect(() => { fetchCases(); }, []);
 
   const fetchCases = async () => {
     try {
       setLoading(true);
       const data = await api.getCases();
       setCases(data);
-      setError(null);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to fetch case reminders.');
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
-  const getRemindersList = () => {
-    const reminders = [];
-    const today = new Date();
-    today.setHours(0,0,0,0);
+  const parseLocalDate = (dateStr) => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('T')[0].split('-');
+    if (parts.length !== 3) return new Date(dateStr);
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  };
 
-    const parseLocalDate = (dateStr) => {
-      if (!dateStr) return null;
-      const parts = dateStr.split('T')[0].split('-');
-      if (parts.length !== 3) return new Date(dateStr);
-      const year = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1;
-      const day = parseInt(parts[2], 10);
-      return new Date(year, month, day);
-    };
+  const getGroupedReminders = () => {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const groups = {};
+    const q = searchText.trim().toLowerCase();
 
     cases.forEach(c => {
-      // 1. Reply Deadline Reminder
-      if (c.last_date_reply && !c.date_filing_reply) {
-        const deadline = parseLocalDate(c.last_date_reply);
-        const diffDays = Math.round((deadline - today) / (1000 * 60 * 60 * 24));
-        reminders.push({
-          id: `${c.id}-reply`,
-          caseId: c.id,
-          case_ref_no: c.case_ref_no,
-          applicant: c.applicant,
-          forum: c.forum,
-          type: 'Reply Deadline',
-          date: c.last_date_reply,
-          daysLeft: diffDays,
-          status: diffDays < 0 ? 'Overdue' : diffDays <= 7 ? 'Urgent' : 'Pending',
-          description: `Deadline to file reply is due. (Case: ${c.applicant} Vs. ${c.respondent})`
-        });
-      }
-
-      // 2. Next Hearing Date Reminder
       if (c.next_hearing_date) {
-        const hearing = parseLocalDate(c.next_hearing_date);
-        const diffDays = Math.round((hearing - today) / (1000 * 60 * 60 * 24));
-        if (diffDays >= -1) { // Show hearings in the future or today/yesterday
-          reminders.push({
-            id: `${c.id}-hearing`,
-            caseId: c.id,
-            case_ref_no: c.case_ref_no,
-            applicant: c.applicant,
-            forum: c.forum,
-            type: 'Next Hearing (DOH)',
-            date: c.next_hearing_date,
-            daysLeft: diffDays,
-            status: diffDays === 0 ? 'Today' : diffDays === 1 ? 'Tomorrow' : diffDays <= 5 ? 'Urgent' : 'Scheduled',
-            description: `Hearing date in court. (Case: ${c.applicant} Vs. ${c.respondent})`
-          });
+        if (q) {
+          const haystack = [c.case_ref_no, c.applicant, c.respondent, c.forum, c.railway, c.file_no, c.link_file_no, c.nodal_officer_name, c.advocate_name].filter(Boolean).join(' ').toLowerCase();
+          if (!haystack.includes(q)) return;
         }
-      }
+        const hDate = parseLocalDate(c.next_hearing_date);
+        if (!hDate) return;
+        const diffDays = Math.round((hDate - today) / 86400000);
+        if (diffDays < -30) return;
 
-      // 3. Appeal / Implementation Deadline Reminder
-      if (c.last_date_appeal_implementation) {
-        const deadline = parseLocalDate(c.last_date_appeal_implementation);
-        const diffDays = Math.round((deadline - today) / (1000 * 60 * 60 * 24));
-        reminders.push({
-          id: `${c.id}-appeal`,
-          caseId: c.id,
-          case_ref_no: c.case_ref_no,
-          applicant: c.applicant,
-          forum: c.forum,
-          type: 'Appeal/Compliance',
-          date: c.last_date_appeal_implementation,
-          daysLeft: diffDays,
-          status: diffDays < 0 ? 'Overdue' : diffDays <= 15 ? 'Urgent' : 'Pending',
-          description: `Deadline for filing appeal or implementing judgment directives.`
+        const urgency = diffDays < 0 ? 'overdue' : diffDays === 0 ? 'today' : diffDays <= 3 ? 'critical' : diffDays <= 7 ? 'soon' : 'upcoming';
+        if (urgencyFilter !== 'All' && urgency !== urgencyFilter) return;
+
+        const dateKey = c.next_hearing_date;
+        if (!groups[dateKey]) {
+          groups[dateKey] = {
+            date: dateKey,
+            label: diffDays === 0 ? 'Today' : diffDays === 1 ? 'Tomorrow' : diffDays < 0 ? `${Math.abs(diffDays)}d overdue` : `In ${diffDays} days`,
+            urgency,
+            cases: []
+          };
+        }
+        groups[dateKey].cases.push({
+          id: c.id, case_ref_no: c.case_ref_no, applicant: c.applicant,
+          respondent: c.respondent, forum: c.forum, daysLeft: diffDays,
         });
       }
     });
 
-    // Sort by chronological order (closest deadline first)
-    return reminders.sort((a, b) => a.daysLeft - b.daysLeft);
+    return Object.values(groups).sort((a, b) => a.date.localeCompare(b.date));
   };
 
-  const remindersList = getRemindersList();
-
-  const getReminderBadgeClass = (status) => {
-    switch (status) {
-      case 'Overdue': return 'status-tag urgent';
-      case 'Today': return 'status-tag urgent';
-      case 'Tomorrow': return 'status-tag pending';
-      case 'Urgent': return 'status-tag pending';
-      case 'Scheduled': return 'status-tag sinedie';
-      default: return 'status-tag sinedie';
-    }
-  };
+  const groups = getGroupedReminders();
+  const urgencyColors = { overdue: '#DC2626', today: '#DC2626', critical: '#D97706', soon: '#F59E0B', upcoming: '#059669' };
+  const urgencyBg = { overdue: '#FEF2F2', today: '#FEF2F2', critical: '#FFF7ED', soon: '#FFFBEB', upcoming: '#ECFDF5' };
 
   return (
     <div>
-      <div className="section-header-goi" style={{ marginBottom: '2rem' }}>
+      <div className="section-header-goi" style={{ marginBottom: '1.5rem' }}>
         <div>
-          <h2 className="goi-title-main">महत्वपूर्ण अनुस्मारक / Critical Deadlines & Reminders</h2>
-          <p className="goi-subtitle-main">Monitor upcoming reply timelines, judicial hearing dates, and compliance milestones.</p>
+          <h2 className="goi-title-main">महत्वपूर्ण अनुस्मारक / Deadlines & Reminders</h2>
+          <p className="goi-subtitle-main">Cases grouped by hearing date — click any case to view details</p>
         </div>
       </div>
 
-      {error && <div className="alert-banner error">{error}</div>}
+      {!loading && groups.length > 0 && (
+        <div className="glass-panel" style={{ background: '#fff', border: '1px solid #d1d5db', borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: '1 1 280px', minWidth: '220px' }}>
+              <svg style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} width="16" height="16" fill="none" stroke="#6b7280" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              <input
+                type="text"
+                placeholder="Search reminders by case ref, applicant, file no, advocate..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2.25rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', background: '#f9fafb' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>Urgency:</span>
+              {['All', 'overdue', 'today', 'critical', 'soon', 'upcoming'].map(u => (
+                <button
+                  key={u}
+                  onClick={() => setUrgencyFilter(u)}
+                  style={{
+                    padding: '0.3rem 0.7rem', fontSize: '0.72rem', fontWeight: 700,
+                    background: urgencyFilter === u ? '#0f2c59' : '#fff',
+                    color: urgencyFilter === u ? '#fff' : '#374151',
+                    border: '1px solid ' + (urgencyFilter === u ? '#0f2c59' : '#d1d5db'),
+                    borderRadius: '14px', cursor: 'pointer', textTransform: 'capitalize'
+                  }}
+                >
+                  {u}
+                </button>
+              ))}
+            </div>
+            {(searchText.trim() || urgencyFilter !== 'All') && (
+              <button
+                onClick={() => { setSearchText(''); setUrgencyFilter('All'); }}
+                style={{ padding: '0.4rem 0.85rem', fontSize: '0.75rem', background: '#fff', border: '1px solid #d1d5db', color: '#374151', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b7280' }}>
+            {(() => {
+              const totalCases = groups.reduce((sum, g) => sum + g.cases.length, 0);
+              return (
+                <>Showing <strong style={{ color: '#0f2c59' }}>{totalCases}</strong> case{totalCases !== 1 ? 's' : ''} across <strong style={{ color: '#0f2c59' }}>{groups.length}</strong> date{groups.length !== 1 ? 's' : ''}</>
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
-      <div className="glass-panel" style={{ background: '#fff', border: '1px solid #d1d5db', padding: '1.5rem' }}>
-        {loading ? (
-          <div className="spinner-container">
-            <div className="spinner"></div>
-            <p style={{ color: '#4b5563' }}>Loading reminders...</p>
-          </div>
-        ) : remindersList.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
-            <h3>No critical reminders recorded</h3>
-            <p>All legal reply timelines, hearings, and compliance milestones are up to date.</p>
-          </div>
-        ) : (
-          <div className="cases-table-container" style={{ border: '1px solid #d1d5db' }}>
-            <table className="cases-table">
-              <thead>
-                <tr style={{ background: '#f3f4f6' }}>
-                  <th style={{ color: '#4b5563' }}>Case Reference / Petitioner</th>
-                  <th style={{ color: '#4b5563' }}>Forum</th>
-                  <th style={{ color: '#4b5563' }}>Reminder Type</th>
-                  <th style={{ color: '#4b5563' }}>Target Date</th>
-                  <th style={{ color: '#4b5563' }}>Proximity</th>
-                  <th style={{ color: '#4b5563' }}>Status</th>
-                  <th style={{ color: '#4b5563' }}>Details</th>
-                  <th style={{ color: '#4b5563', textAlign: 'right' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {remindersList.map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <span className="case-ref-link" onClick={() => navigate(`/cases/${r.caseId}`)} style={{ display: 'inline-block', marginBottom: r.applicant ? '0.25rem' : '0' }}>
-                        {r.case_ref_no}
-                      </span>
-                      {r.applicant && (
-                        <div style={{ 
-                          fontSize: '0.75rem', 
-                          color: '#6b7280',
-                          lineHeight: '1.25'
-                        }}>
-                          Petitioner: <span style={{ color: '#374151', fontWeight: 600 }}>{r.applicant}</span>
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <span style={{ fontWeight: 600, color: '#111827' }}>{r.forum || 'N/A'}</span>
-                    </td>
-                    <td>
-                      <strong style={{ 
-                        color: r.type.includes('Hearing') ? '#06b6d4' : r.type.includes('Reply') ? '#f59e0b' : '#ef4444',
-                        fontSize: '0.85rem'
-                      }}>
-                        {r.type}
-                      </strong>
-                    </td>
-                    <td>
-                      <span style={{ fontWeight: 500, color: '#111827' }}>
-                        {new Date(r.date).toLocaleDateString(undefined, { 
-                          year: 'numeric', 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })}
-                      </span>
-                    </td>
-                    <td>
-                      {r.daysLeft < 0 ? (
-                        <span style={{ color: '#ef4444', fontWeight: 700 }}>
-                          {-r.daysLeft} days overdue
-                        </span>
-                      ) : r.daysLeft === 0 ? (
-                        <span style={{ color: '#ef4444', fontWeight: 700 }}>
-                          TODAY
-                        </span>
-                      ) : r.daysLeft === 1 ? (
-                        <span style={{ color: '#f59e0b', fontWeight: 600 }}>
-                          TOMORROW
-                        </span>
-                      ) : (
-                        <span style={{ color: '#4b5563' }}>
-                          In {r.daysLeft} days
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <span className={getReminderBadgeClass(r.status)} style={{ boxShadow: 'none' }}>
-                        {r.status}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.875rem', color: '#4b5563' }}>
-                        {r.description}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button 
-                        className="btn btn-secondary" 
-                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
-                        onClick={() => navigate(`/cases/${r.caseId}`)}
-                      >
-                        Open Case
-                      </button>
-                    </td>
-                  </tr>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '3rem' }}><div className="spinner" /></div>
+      ) : groups.length === 0 ? (
+        <div className="empty">
+          <h3>{searchText.trim() || urgencyFilter !== 'All' ? 'No reminders match your filters' : 'No upcoming hearings'}</h3>
+          <p>{searchText.trim() || urgencyFilter !== 'All' ? 'Try clearing filters or adjusting your search.' : 'All cases are up to date.'}</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {groups.map(g => (
+            <div key={g.date} className="card" style={{ padding: '0.75rem 1rem', borderLeft: `4px solid ${urgencyColors[g.urgency]}` }}>
+              <div className="flex-between mb-2" style={{ borderBottom: `1px solid ${urgencyBg[g.urgency]}`, paddingBottom: '0.4rem' }}>
+                <strong style={{ color: urgencyColors[g.urgency], fontSize: '0.85rem' }}>
+                  📅 {new Date(g.date).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).replace(/\//g, '-')}
+                  <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', background: urgencyBg[g.urgency], color: urgencyColors[g.urgency], padding: '0.1rem 0.4rem', borderRadius: '3px', fontWeight: 700 }}>
+                    {g.label.toUpperCase()}
+                  </span>
+                </strong>
+                <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>{g.cases.length} case{g.cases.length > 1 ? 's' : ''}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                {g.cases.map(c => (
+                  <div key={c.id} onClick={() => navigate(`/cases/${c.id}`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.35rem 0.5rem', fontSize: '0.78rem', cursor: 'pointer', borderRadius: '4px', transition: 'background 0.1s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <span className="case-link" style={{ fontWeight: 700, minWidth: '200px' }}>
+                      {c.case_ref_no}
+                    </span>
+                    <span style={{ color: '#4b5563', flex: 1 }}>
+                      {c.applicant?.substring(0, 40) || 'Unknown'}
+                    </span>
+                    <span style={{ color: '#6b7280', fontSize: '0.7rem' }}>{c.forum}</span>
+                    {c.daysLeft < 0 && <span className="tag urgent">Overdue</span>}
+                    {c.daysLeft === 0 && <span className="tag urgent">Today</span>}
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

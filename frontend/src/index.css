@@ -105,6 +105,8 @@
 
 [data-theme="dark"] .kpi-value { color: var(--text-primary) !important; }
 [data-theme="dark"] .meta-value { color: var(--text-primary) !important; }
+.case-link { font-weight: 700; color: var(--accent-color); cursor: pointer; }
+.case-link:hover { text-decoration: underline; }
 [data-theme="dark"] .case-link { color: var(--accent-color) !important; }
 [data-theme="dark"] .cases-table td { color: var(--text-primary); }
 [data-theme="dark"] .cases-table th { color: var(--text-secondary); }

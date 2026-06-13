@@ -745,7 +745,7 @@ export default function CaseForm() {
                 name="court_link"
                 className="form-control"
                 style={{ background: '#f9fafb', borderColor: '#d1d5db', color: '#111827' }}
-                placeholder="e.g. https://delhihighcourt.nic.in/court/causelist/search..."
+                placeholder="e.g. https://court-portal.gov.in/case-status/..."
                 value={formData.court_link}
                 onChange={handleChange}
               />

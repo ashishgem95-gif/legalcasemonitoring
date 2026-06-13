@@ -1,5 +1,7 @@
 const { run, get, all } = require('../config/dbHelper');
+const { db } = require('../config/database');
 const { logger } = require('../config/logger');
+const { DISPOSED_STATUSES } = require('../config/constants');
 
 const CONCURRENCY = 20;
 const FETCH_TIMEOUT = 15000;
@@ -7,10 +9,41 @@ const today = new Date().toISOString().split('T')[0];
 
 function parseDate(str) {
   if (!str) return null;
-  const m = str.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-  if (!m) return null;
-  let y = parseInt(m[3]); if (y < 100) y += 2000;
-  return `${y}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+  str = str.trim();
+  
+  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  
+  const dmyMatch = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+  if (dmyMatch) {
+    const d = parseInt(dmyMatch[1]);
+    const m = parseInt(dmyMatch[2]);
+    if (d >= 1 && d <= 31 && m >= 1 && m <= 12) {
+      return `${dmyMatch[3]}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+  }
+  
+  const mdyMatch = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2})$/);
+  if (mdyMatch) {
+    let y = parseInt(mdyMatch[3]);
+    y += 2000;
+    const d = parseInt(mdyMatch[1]);
+    const m = parseInt(mdyMatch[2]);
+    if (d >= 1 && d <= 31 && m >= 1 && m <= 12) {
+      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+  }
+  
+  const months = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
+  const textMatch = str.match(/^(\d{1,2})\s+([a-zA-Z]{3,9})\s+(\d{4})$/);
+  if (textMatch) {
+    const m = months[textMatch[2].toLowerCase().substring(0, 3)];
+    if (m) {
+      return `${textMatch[3]}-${String(m).padStart(2, '0')}-${String(parseInt(textMatch[1])).padStart(2, '0')}`;
+    }
+  }
+  
+  return null;
 }
 
 async function fetchWithTimeout(url) {
@@ -79,7 +112,6 @@ async function checkCase(c) {
   const result = { caseId: c.id, caseRefNo: c.case_ref_no, petitioner: c.applicant || 'Unknown', status: 'pending', hearingsAdded: 0, pdfsAdded: 0, newNextDate: null, error: null };
 
   try {
-    // Get the CAT detail URL from case_documents
     const doc = get(
       `SELECT storage_path FROM case_documents WHERE case_id = ? AND storage_path LIKE '%Misdetailreport123.php%' LIMIT 1`,
       [c.id]
@@ -90,7 +122,6 @@ async function checkCase(c) {
       return result;
     }
 
-    // Extract diary_no from the detail URL
     const url = new URL(doc.storage_path);
     const detailParam = url.searchParams.get('no');
     if (!detailParam) { result.status = 'skipped'; result.error = 'No detail param'; return result; }
@@ -105,68 +136,64 @@ async function checkCase(c) {
     const html = await fetchWithTimeout(dailyUrl);
     const orders = parseDailyOrders(html);
 
-    // Store new hearings
-    for (const h of orders.hearings) {
-      const existing = get('SELECT id FROM hearing_history WHERE case_id = ? AND hearing_date = ?', [c.id, h.date]);
-      if (!existing) {
-        run('INSERT INTO hearing_history (case_id, hearing_date, order_summary, order_raw_text) VALUES (?, ?, ?, ?)',
-          [c.id, h.date, `${h.purpose} — ${h.nature}${h.nextDate ? ' | Next: ' + h.nextDate : ''}`, `Purpose: ${h.purpose} | Nature: ${h.nature}`]);
-        result.hearingsAdded++;
+    const syncTransaction = db.transaction(() => {
+      for (const h of orders.hearings) {
+        const stmt = db.prepare('INSERT OR IGNORE INTO hearing_history (case_id, hearing_date, order_summary, order_raw_text) VALUES (?, ?, ?, ?)');
+        const info = stmt.run(c.id, h.date, `${h.purpose} — ${h.nature}${h.nextDate ? ' | Next: ' + h.nextDate : ''}`, `Purpose: ${h.purpose} | Nature: ${h.nature}`);
+        if (info.changes > 0) result.hearingsAdded++;
       }
-    }
 
-    // Store new PDFs
-    for (const pdf of orders.pdfs) {
-      const pdfUrl = typeof pdf === 'string' ? pdf : pdf.url;
-      const pdfDate = typeof pdf === 'string' ? null : pdf.date;
-      const existing = get('SELECT id FROM case_documents WHERE case_id = ? AND storage_path = ?', [c.id, pdfUrl]);
-      if (!existing) {
-        const label = pdfDate ? `Order dated ${pdfDate}` : 'Court Order';
-        run(`INSERT INTO case_documents (case_id, filename, original_name, mime_type, storage_path, uploaded_by) VALUES (?, ?, ?, 'application/pdf', ?, 'smart-sync')`,
-          [c.id, `order_${pdfDate || Date.now()}.pdf`, `${label} — ${c.caseRefNo}`, pdfUrl]);
-        result.pdfsAdded++;
+      for (const pdf of orders.pdfs) {
+        const pdfUrl = typeof pdf === 'string' ? pdf : pdf.url;
+        const pdfDate = typeof pdf === 'string' ? null : pdf.date;
+        const existing = get('SELECT id FROM case_documents WHERE case_id = ? AND storage_path = ?', [c.id, pdfUrl]);
+        if (!existing) {
+          const label = pdfDate ? `Order dated ${pdfDate}` : 'Court Order';
+          db.prepare(`INSERT INTO case_documents (case_id, filename, original_name, mime_type, storage_path, uploaded_by) VALUES (?, ?, ?, 'application/pdf', ?, 'smart-sync')`)
+            .run(c.id, `order_${pdfDate || Date.now()}.pdf`, `${label} — ${c.case_ref_no}`, pdfUrl);
+          result.pdfsAdded++;
+        }
       }
-    }
 
-    // Update next hearing date from the latest hearing's Next field
-    if (orders.hearings.length > 0) {
-      const latestWithNext = orders.hearings.find(h => h.nextDate);
-      if (latestWithNext?.nextDate) {
-        run('UPDATE cases SET next_hearing_date = ? WHERE id = ?', [latestWithNext.nextDate, c.id]);
-        result.newNextDate = latestWithNext.nextDate;
+      if (orders.hearings.length > 0) {
+        const latestWithNext = orders.hearings.find(h => h.nextDate);
+        if (latestWithNext?.nextDate) {
+          db.prepare('UPDATE cases SET next_hearing_date = ? WHERE id = ?').run(latestWithNext.nextDate, c.id);
+          result.newNextDate = latestWithNext.nextDate;
+        }
       }
-    }
 
-    // Update case status if disposed
-    if (orders.caseStatus === 'Disposed') {
-      run("UPDATE cases SET present_status = 'Disposed', next_hearing_date = NULL WHERE id = ?", [c.id]);
-      result.caseStatus = 'Disposed';
-    }
+      if (orders.caseStatus === 'Disposed') {
+        db.prepare("UPDATE cases SET present_status = 'Disposed', next_hearing_date = NULL WHERE id = ?").run(c.id);
+        result.caseStatus = 'Disposed';
+      }
 
-    // Mark as checked
-    run('UPDATE cases SET last_checked_at = CURRENT_TIMESTAMP WHERE id = ?', [c.id]);
+      db.prepare('UPDATE cases SET last_checked_at = CURRENT_TIMESTAMP WHERE id = ?').run(c.id);
+    });
+
+    syncTransaction();
 
     result.status = result.hearingsAdded > 0 || result.pdfsAdded > 0 ? 'updated' : 'no_change';
   } catch (err) {
     result.status = 'error';
     result.error = err.message;
-    // Still mark as checked so we don't retry immediately
-    try { run('UPDATE cases SET last_checked_at = CURRENT_TIMESTAMP WHERE id = ?', [c.id]); } catch {}
+    try { db.prepare('UPDATE cases SET last_checked_at = CURRENT_TIMESTAMP WHERE id = ?').run(c.id); } catch {}
   }
 
   return result;
 }
 
 async function runSmartSync() {
-  // Find cases where next hearing date has passed AND not checked today
+  const today = new Date().toISOString().split('T')[0];
+  const placeholders = DISPOSED_STATUSES.map(() => '?').join(',');
   const cases = all(`
     SELECT c.* FROM cases c
     WHERE c.next_hearing_date IS NOT NULL
     AND c.next_hearing_date < ?
-    AND c.present_status != 'Disposed'
+    AND c.present_status NOT IN (${placeholders})
     AND (c.last_checked_at IS NULL OR c.last_checked_at < ?)
     ORDER BY c.next_hearing_date ASC
-  `, [today, today]);
+  `, [today, ...DISPOSED_STATUSES, today]);
 
   logger.info({ count: cases.length }, 'Smart sync - past-due cases to check');
 

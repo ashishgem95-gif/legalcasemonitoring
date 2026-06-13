@@ -3,37 +3,39 @@ const { get, all } = require('../config/dbHelper');
 // GET /api/analytics/dashboard
 exports.getDashboard = (req, res) => {
   try {
-    const total = get('SELECT COUNT(*) as c FROM cases').c;
-    const active = get("SELECT COUNT(*) as c FROM cases WHERE present_status IS NULL OR present_status = 'Pending'").c;
-    const disposed = get("SELECT COUNT(*) as c FROM cases WHERE present_status = 'Disposed'").c;
-    const pendingReplies = get('SELECT COUNT(*) as c FROM cases WHERE last_date_reply IS NOT NULL AND date_filing_reply IS NULL').c;
+    const scopeFilter = req._railwayScope ? ' AND railway = ?' : '';
+    const scopeParams = req._railwayScope ? [req._railwayScope] : [];
+
+    const total = get(`SELECT COUNT(*) as c FROM cases WHERE 1=1 ${scopeFilter}`, scopeParams).c;
+    const active = get(`SELECT COUNT(*) as c FROM cases WHERE (present_status IS NULL OR present_status = 'Pending') ${scopeFilter}`, scopeParams).c;
+    const disposed = get(`SELECT COUNT(*) as c FROM cases WHERE present_status = 'Disposed' ${scopeFilter}`, scopeParams).c;
+    const pendingReplies = get(`SELECT COUNT(*) as c FROM cases WHERE last_date_reply IS NOT NULL AND date_filing_reply IS NULL ${scopeFilter}`, scopeParams).c;
 
     const today = new Date().toISOString().split('T')[0];
     const weekEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const upcomingHearings = get(
-      'SELECT COUNT(*) as c FROM hearing_history WHERE hearing_date BETWEEN ? AND ?',
-      [today, weekEnd]
+      `SELECT COUNT(*) as c FROM hearing_history h JOIN cases c ON h.case_id = c.id WHERE h.hearing_date BETWEEN ? AND ?${req._railwayScope ? ' AND c.railway = ?' : ''}`,
+      [today, weekEnd, ...scopeParams]
     ).c;
 
-    // Case type breakdown
     const byType = all(
-      'SELECT case_type, COUNT(*) as count FROM cases GROUP BY case_type ORDER BY count DESC'
+      `SELECT case_type, COUNT(*) as count FROM cases WHERE 1=1 ${scopeFilter} GROUP BY case_type ORDER BY count DESC`,
+      scopeParams
     );
 
-    // Monthly trend (last 12 months)
     const monthlyTrend = all(
       `SELECT strftime('%Y-%m', created_at) as month, COUNT(*) as count
        FROM cases
-       WHERE created_at >= DATE('now', '-12 months')
-       GROUP BY month ORDER BY month`
+       WHERE created_at >= DATE('now', '-12 months') ${scopeFilter}
+       GROUP BY month ORDER BY month`,
+      scopeParams
     );
 
-    // Forum distribution
     const byForum = all(
-      'SELECT forum, COUNT(*) as count FROM cases GROUP BY forum ORDER BY count DESC'
+      `SELECT forum, COUNT(*) as count FROM cases WHERE 1=1 ${scopeFilter} GROUP BY forum ORDER BY count DESC`,
+      scopeParams
     );
 
-    // Age distribution
     const ageDistribution = all(
       `SELECT
         CASE
@@ -44,7 +46,8 @@ exports.getDashboard = (req, res) => {
           ELSE '1yr+'
         END as age_bucket,
         COUNT(*) as count
-       FROM cases GROUP BY age_bucket ORDER BY age_bucket`
+       FROM cases WHERE 1=1 ${scopeFilter} GROUP BY age_bucket ORDER BY age_bucket`,
+      scopeParams
     );
 
     res.json({

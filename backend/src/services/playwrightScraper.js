@@ -129,7 +129,7 @@ async function scrapeCaseDetail(page, caseRecord) {
             const pdfs = [];
             document.querySelectorAll('a[href*="pdf"], a[href*="order"]').forEach(link => {
               const href = link.getAttribute('href');
-              if (href) pdfs.push(href);
+              if (href) pdfs.push({ url: href, date: null, label: 'Court Order' });
             });
 
             return { orders, pdfs };
@@ -178,12 +178,12 @@ async function scrapeCaseDetail(page, caseRecord) {
     const seenUrls = new Set();
     for (const pdf of result.pdfs) {
       try {
-        const pdfUrl = pdf.url?.startsWith('http') ? pdf.url :
-          pdf.url ? `https://cis.cgat.gov.in/catlive/${pdf.url.replace('./', '')}` : null;
-        if (!pdfUrl || seenUrls.has(pdfUrl)) continue;
+        const pdfUrl = typeof pdf === 'string' ? pdf : pdf.url;
+        if (!pdfUrl || !pdfUrl.startsWith('http')) continue;
+        if (seenUrls.has(pdfUrl)) continue;
         seenUrls.add(pdfUrl);
 
-        const label = pdf.label || pdfUrl.split('/').pop() || 'Court Order';
+        const label = (typeof pdf === 'string' ? null : pdf.label) || pdfUrl.split('/').pop() || 'Court Order';
         const existing = get(
           'SELECT id FROM case_documents WHERE case_id = ? AND storage_path = ?',
           [caseRecord.id, pdfUrl]

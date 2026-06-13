@@ -4,3 +4,5 @@ node_modules/
 dist/
 .vite/
 legal_tracker.db*
+.tmp_hc_*
+.DS_Store

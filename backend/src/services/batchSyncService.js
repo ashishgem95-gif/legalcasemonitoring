@@ -59,12 +59,19 @@ function parseEcourtsResults(html) {
 
   // Also try to find dates from the text
   const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  const dates = text.match(/(\d{2}\/\d{2}\/\d{4})/g) || [];
+  const dateRegex = /(?:listed\s+on|next\s+hearing|hearing\s+on|order\s+dated|judgment\s+dated)\s*[:\-]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/gi;
+  const dateMatches = text.match(dateRegex) || [];
+  const dates = dateMatches.map(m => {
+    const dm = m.match(/(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/);
+    return dm ? dm[1] : null;
+  }).filter(Boolean);
   const uniqueDates = [...new Set(dates)].map(parseDate).filter(Boolean).sort();
 
   // Extract case status indicators
   let status = null;
-  if (/Disposed|Dismissed|Allowed|Disposed/i.test(text)) status = 'Disposed';
+  if (/\bdismissed\b/i.test(text)) status = 'Dismissed';
+  else if (/\bdisposed\b/i.test(text)) status = 'Disposed';
+  else if (/\ballowed\b/i.test(text)) status = 'Allowed';
   else if (/Pending|Hearing/i.test(text)) status = 'Pending';
 
   return { count: caseCards.length, dates: uniqueDates, status, snippet: text.substring(0, 500) };

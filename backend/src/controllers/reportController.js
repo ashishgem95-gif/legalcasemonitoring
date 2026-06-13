@@ -31,14 +31,17 @@ exports.getHearingCalendar = (req, res) => {
     const from = from_date || new Date().toISOString().split('T')[0];
     const to = to_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    const hearings = all(
-      `SELECT h.*, c.case_ref_no, c.applicant, c.respondent, c.forum, c.railway
+    let hearingQuery = `SELECT h.*, c.case_ref_no, c.applicant, c.respondent, c.forum, c.railway
        FROM hearing_history h
        JOIN cases c ON h.case_id = c.id
-       WHERE h.hearing_date BETWEEN ? AND ?
-       ORDER BY h.hearing_date ASC`,
-      [from, to]
-    );
+       WHERE h.hearing_date BETWEEN ? AND ?`;
+    const hearingParams = [from, to];
+    if (req._railwayScope) {
+      hearingQuery += ' AND c.railway = ?';
+      hearingParams.push(req._railwayScope);
+    }
+    hearingQuery += ' ORDER BY h.hearing_date ASC';
+    const hearings = all(hearingQuery, hearingParams);
 
     res.json(hearings);
   } catch (err) {
@@ -50,12 +53,17 @@ exports.getHearingCalendar = (req, res) => {
 // GET /api/reports/zone-distribution
 exports.getZoneDistribution = (req, res) => {
   try {
-    const zones = all(
-      `SELECT railway, COUNT(*) as total,
+    let zonesQuery = `SELECT railway, COUNT(*) as total,
         SUM(CASE WHEN present_status = 'Disposed' THEN 1 ELSE 0 END) as disposed,
         SUM(CASE WHEN present_status = 'Pending' OR present_status IS NULL THEN 1 ELSE 0 END) as pending
-       FROM cases GROUP BY railway ORDER BY total DESC`
-    );
+       FROM cases`;
+    const zonesParams = [];
+    if (req._railwayScope) {
+      zonesQuery += ' WHERE railway = ?';
+      zonesParams.push(req._railwayScope);
+    }
+    zonesQuery += ' GROUP BY railway ORDER BY total DESC';
+    const zones = all(zonesQuery, zonesParams);
     res.json(zones);
   } catch (err) {
     console.error('Zone distribution error:', err);

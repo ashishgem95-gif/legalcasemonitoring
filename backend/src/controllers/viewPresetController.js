@@ -8,7 +8,11 @@ exports.getPresets = (req, res) => {
       'SELECT id, name, config, created_at, updated_at FROM view_presets WHERE user_id = ? ORDER BY name',
       [userId]
     );
-    res.json(presets.map(p => ({ ...p, config: JSON.parse(p.config) })));
+    res.json(presets.map(p => {
+      let config = {};
+      try { config = JSON.parse(p.config); } catch (e) { config = {}; }
+      return { ...p, config };
+    }));
   } catch (err) {
     console.error('Error fetching presets:', err);
     res.status(500).json({ error: 'Failed to retrieve view presets' });

@@ -665,9 +665,9 @@ export default function CaseDetail() {
                     ) : (
                       <button className="btn btn-sm" style={{ fontSize: '0.7rem', background: '#FFF7ED', color: '#D97706', border: '1px solid #FED7AA' }}
                         onClick={async () => {
-                          const dt = prompt('Filing date (DD-MM-YYYY):', new Date().toISOString().split('T')[0]);
+                          const dt = prompt('Filing date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
                           if (dt) {
-                            try { const added = await api.addPleading(caseObj.id, { type: p.type, filing_date: dt, document_url: '' }); setPleadings(prev => [...prev, added]); } catch(e) {}
+                            try { const added = await api.addPleading(caseObj.id, { type: p.type, filing_date: dt, document_url: '' }); setPleadings(prev => [...prev, added]); } catch(e) { alert('Failed to add pleading: ' + (e.message || 'Unknown error')); }
                           }
                         }}>+ Add</button>
                     )}

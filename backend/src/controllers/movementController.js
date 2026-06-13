@@ -12,14 +12,17 @@ exports.getMovements = (req, res) => {
       INNER JOIN physical_files pf ON fm.file_id = pf.id
       LEFT JOIN personnel c1 ON fm.from_custodian_id = c1.id
       INNER JOIN personnel c2 ON fm.to_custodian_id = c2.id
+      WHERE 1=1
     `;
     const params = [];
-
     if (file_id) {
-      query += ' WHERE fm.file_id = ?';
+      query += ' AND fm.file_id = ?';
       params.push(file_id);
     }
-
+    if (req._railwayScope) {
+      query += ' AND pf.zonal_railway = ?';
+      params.push(req._railwayScope);
+    }
     query += ' ORDER BY fm.movement_date DESC, fm.id DESC';
     res.json(all(query, params));
   } catch (err) {

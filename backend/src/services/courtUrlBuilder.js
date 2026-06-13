@@ -27,6 +27,44 @@ const CAT_CASE_TYPES = {
   'WP/OA': 1, 'CWJC': 1, 'CWP': 1, 'SCA': 1, 'SLP': 1,
 };
 
+// High Court eCourts portal codes (for direct search URL)
+const ECOURTS_HC_CODES = {
+  'HC/Delhi':   { state: 'DL', dist: '1', est: 'DLHC01' },
+  'HC/Mumbai':  { state: 'MH', dist: '2', est: 'MHHC01' },
+  'HC/BB':      { state: 'MH', dist: '2', est: 'MHHC01' },
+  'HC/Kolkata': { state: 'WB', dist: '1', est: 'WBHC01' },
+  'HC/Chennai': { state: 'TN', dist: '1', est: 'TNHC01' },
+  'HC/Banglore':{ state: 'KA', dist: '1', est: 'KAHC01' },
+  'HC/Bangluru':{ state: 'KA', dist: '1', est: 'KAHC01' },
+  'HC/Patna':   { state: 'BR', dist: '1', est: 'BRHC01' },
+  'HC/JP':      { state: 'RJ', dist: '1', est: 'RJHC01' },
+  'HC/JBL':     { state: 'MP', dist: '1', est: 'MPHC01' },
+  'HC/ALD':     { state: 'UP', dist: '1', est: 'UPHC01' },
+  'HC/LKO':     { state: 'UP', dist: '2', est: 'UPHC02' },
+  'HC/Guj':     { state: 'GJ', dist: '1', est: 'GJHC01' },
+  'HC/ADI':     { state: 'GJ', dist: '1', est: 'GJHC01' },
+  'HC/HYD':     { state: 'TS', dist: '1', est: 'TSHC01' },
+  'HC/TS':      { state: 'TS', dist: '1', est: 'TSHC01' },
+  'HC/GHY':     { state: 'AS', dist: '1', est: 'ASHC01' },
+  'HC/CGH':     { state: 'CT', dist: '1', est: 'CTHC01' },
+  'HC/CTC':     { state: 'OR', dist: '1', est: 'ORHC01' },
+  'HC/KNK':     { state: 'KA', dist: '2', est: 'KAHC01' },
+  'HC/Ernakulam':{ state: 'KL', dist: '1', est: 'KLHC01' },
+};
+
+// Case type codes for certain High Courts (numeric codes vary)
+function getHCCaseTypeCode(caseType, forum) {
+  const t = (caseType || '').toUpperCase();
+  if (t.startsWith('WP')) return '3'; // Writ Petition
+  if (t.startsWith('CRP')) return '4'; // Civil Revision
+  if (t.startsWith('CA')) return '5'; // Civil Appeal
+  if (t.startsWith('SCA')) return '6';
+  if (t.startsWith('SLP')) return '7';
+  if (t.startsWith('CP')) return '8';
+  if (t.startsWith('OA')) return '3'; // May not apply to HC
+  return '3'; // Default
+}
+
 // eCourtsIndia court codes for High Courts and Supreme Court
 const ECOURTS_CODES = {
   'SC': 'SCIN01', 'Supreme Court': 'SCIN01',
@@ -82,22 +120,42 @@ function buildCourtUrls(caseRecord) {
     }];
   }
 
-  // ── High Courts: eCourtsIndia search ──
+  // ── High Courts: eCourtsIndia search (no CAPTCHA) + direct eCourts link ──
   if (forum.startsWith('HC') || forum.startsWith('PHC')) {
     const cc = ECOURTS_CODES[forum];
     const q = caseType + '/' + caseNum + '/' + caseYear;
+    const urls = [];
+
+    // Primary: eCourtsIndia search (no CAPTCHA needed)
     if (cc) {
-      return [{
+      urls.push({
         url: `https://ecourtsindia.com/search?q=${encodeURIComponent(q)}&cc=${cc}&fy=${caseYear}`,
         source: `${forum} — eCourtsIndia search`,
         method: 'GET',
-      }];
+      });
     }
-    return [{
-      url: `https://ecourtsindia.com/search?q=${encodeURIComponent(q)}&fy=${caseYear}`,
-      source: 'eCourtsIndia generic search',
-      method: 'GET',
-    }];
+
+    // Secondary: Direct eCourts portal link (pre-filled, needs CAPTCHA)
+    const hcInfo = ECOURTS_HC_CODES[forum];
+    if (hcInfo) {
+      const ctCode = getHCCaseTypeCode(caseType, forum);
+      urls.push({
+        url: `https://services.ecourts.gov.in/ecourtindia_v6/?p=high_court/caseStatus&app_token=&stateCode=${hcInfo.state}&distCode=${hcInfo.dist}&courtCode=${hcInfo.est}&caseType=${ctCode}&caseNo=${caseNum}&cYear=${caseYear}`,
+        source: `${forum} — eCourts Portal (CAPTCHA required)`,
+        method: 'GET',
+        needsCaptcha: true,
+      });
+    }
+
+    if (!cc) {
+      urls.push({
+        url: `https://ecourtsindia.com/search?q=${encodeURIComponent(q)}&fy=${caseYear}`,
+        source: 'eCourtsIndia generic search',
+        method: 'GET',
+      });
+    }
+
+    return urls;
   }
 
   return [{

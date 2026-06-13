@@ -6,7 +6,16 @@ const rateLimit = require('express-rate-limit');
 const apiRoutes = require('./routes/api');
 const { requestLogger, logger } = require('./config/logger');
 
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error({ reason, promise }, 'Unhandled Promise Rejection');
+});
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err }, 'Uncaught Exception - shutting down');
+  process.exit(1);
+});
+
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 
 // ── Security ──
@@ -73,6 +82,15 @@ app.use((err, req, res, _next) => {
 const server = app.listen(PORT, () => {
   logger.info({ port: PORT }, 'Backend server started');
 
+  const { run } = require('./config/dbHelper');
+  const cleanupSessions = () => {
+    try {
+      run("DELETE FROM user_sessions WHERE expires_at < datetime('now')");
+    } catch (e) { logger.error({ err: e }, 'Failed to cleanup expired sessions'); }
+  };
+  cleanupSessions();
+  setInterval(cleanupSessions, 6 * 60 * 60 * 1000);
+
   // Initialize scheduler services
   try {
     const scraperService = require('./services/scraperService');
@@ -95,13 +113,29 @@ const server = app.listen(PORT, () => {
   } catch (e) { logger.error({ err: e }, 'Failed to init email scheduler'); }
 });
 
+server.on('error', (err) => {
+  logger.fatal({ err }, 'Server failed to start');
+  process.exit(1);
+});
+
 // ── Graceful Shutdown ──
+const { db } = require('./config/database');
+const scraperService = require('./services/scraperService');
+
 process.on('SIGINT', () => {
   logger.info('Shutting down server...');
+  if (typeof scraperService.stopScheduler === 'function') {
+    scraperService.stopScheduler();
+  }
   server.close(() => {
+    try { db.close(); } catch (e) { /* ignore */ }
     logger.info('Server process terminated.');
     process.exit(0);
   });
+  setTimeout(() => {
+    logger.warn('Forced shutdown after 10s');
+    process.exit(1);
+  }, 10000).unref();
 });
 
 module.exports = app;
