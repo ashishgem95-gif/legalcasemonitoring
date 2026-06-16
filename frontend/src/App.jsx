@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import Home from './components/Home';
+import Dashboard from './components/Dashboard';
 import CaseList from './components/CaseList';
 import CaseDetail from './components/CaseDetail';
 import CaseForm from './components/CaseForm';
@@ -250,7 +250,7 @@ export default function App() {
         <Header user={user} onLogout={handleLogout} />
         <main className="main-content">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Dashboard />} />
             <Route path="/cases" element={<CaseList />} />
             <Route path="/cases/new" element={<CaseForm />} />
             <Route path="/cases/:id" element={<CaseDetail />} />

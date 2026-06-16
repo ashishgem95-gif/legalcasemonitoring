@@ -201,6 +201,8 @@ export const api = {
   smartSync: () => requestWithAi('/sync/smart', { method: 'POST' }),
   resyncCase: (caseId) => request(`/sync/case/${caseId}`, { method: 'POST' }),
 
+  getAnalyticsCharts: (range = 30) => request(`/analytics/charts?range=${encodeURIComponent(range)}`),
+
   getFileActivity: () => request('/admin/file-activity'),
   markAlertsSeen: () => request('/admin/file-activity/seen', { method: 'POST' }),
 };

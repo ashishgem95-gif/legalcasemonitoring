@@ -295,7 +295,52 @@ const extractPdfText = async (req, res) => {
   }
 };
 
+const updateCaseStatus = async (req, res) => {
+  try {
+    const caseId = req.params.id;
+    const { status } = req.body;
+    if (!status || !status.trim()) {
+      return res.status(400).json({ error: 'Status is required' });
+    }
+    const existingCase = get('SELECT * FROM cases WHERE id = ?', [caseId]);
+    if (!existingCase) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+    if (!checkCaseAccess(existingCase, req.user)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    run('UPDATE cases SET present_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [status.trim(), caseId]);
+    res.json({ success: true, caseId: parseInt(caseId), newStatus: status.trim() });
+  } catch (err) {
+    console.error('Error updating case status:', err);
+    res.status(500).json({ error: 'Failed to update case status' });
+  }
+};
+
+const updateCaseNextHearing = async (req, res) => {
+  try {
+    const caseId = req.params.id;
+    const { nextHearingDate } = req.body;
+    if (!nextHearingDate || !nextHearingDate.trim()) {
+      return res.status(400).json({ error: 'nextHearingDate is required (YYYY-MM-DD)' });
+    }
+    const existingCase = get('SELECT * FROM cases WHERE id = ?', [caseId]);
+    if (!existingCase) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+    if (!checkCaseAccess(existingCase, req.user)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    run('UPDATE cases SET next_hearing_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [nextHearingDate.trim(), caseId]);
+    res.json({ success: true, caseId: parseInt(caseId), nextHearingDate: nextHearingDate.trim() });
+  } catch (err) {
+    console.error('Error updating hearing date:', err);
+    res.status(500).json({ error: 'Failed to update hearing date' });
+  }
+};
+
 module.exports = {
   getCases, getCaseById, createCase, updateCase, deleteCase,
+  updateCaseStatus, updateCaseNextHearing,
   parseCase, parsePdfCaseFile, extractPdfText
 };

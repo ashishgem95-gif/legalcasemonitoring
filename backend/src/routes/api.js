@@ -24,6 +24,7 @@ router.post('/auth/logout', logout);
 // ── Cases ──
 const {
   getCases, getCaseById, createCase, updateCase, deleteCase,
+  updateCaseStatus, updateCaseNextHearing,
   parseCase, parsePdfCaseFile, extractPdfText
 } = require('../controllers/caseController');
 router.get('/cases', enforceScope, getCases);
@@ -34,6 +35,8 @@ router.get('/cases/:id', getCaseById);
 router.post('/cases', validate(caseSchema), enforceScopeBody, createCase);
 router.put('/cases/:id', validate(caseSchema), enforceScopeBody, updateCase);
 router.delete('/cases/:id', deleteCase);
+router.patch('/cases/:id/status', enforceScopeBody, updateCaseStatus);
+router.patch('/cases/:id/next-hearing', enforceScopeBody, updateCaseNextHearing);
 
 // ── Alerts ──
 const { getAlerts, markAlertAsRead, markAllAlertsAsRead, triggerManualCrawl, checkDueCases } = require('../controllers/alertController');
@@ -89,9 +92,10 @@ router.get('/reports/zone-distribution', enforceScope, getZoneDistribution);
 router.get('/reports/export', enforceScope, exportCases);
 
 // ── Analytics ──
-const { getDashboard, getSystemHealth } = require('../controllers/analyticsController');
+const { getDashboard, getSystemHealth, getChartData } = require('../controllers/analyticsController');
 router.get('/analytics/dashboard', enforceScope, getDashboard);
 router.get('/analytics/health', getSystemHealth);
+router.get('/analytics/charts', enforceScope, getChartData);
 
 // ── Bulk Operations ──
 const { bulkUpdate } = require('../controllers/bulkController');
@@ -129,8 +133,8 @@ const { triggerBatchSync, triggerPlaywrightSync, triggerOrderSync, triggerSmartS
 router.post('/sync/start', syncLimiter, triggerBatchSync);
 router.post('/sync/playwright', syncLimiter, triggerPlaywrightSync);
 router.post('/sync/orders', syncLimiter, triggerOrderSync);
-router.post('/sync/smart', syncLimiter, triggerSmartSync);
-router.post('/sync/case/:id', syncLimiter, resyncSingleCase);
+router.post('/sync/smart', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), triggerSmartSync);
+router.post('/sync/case/:id', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), resyncSingleCase);
 router.get('/sync/status', getSyncStatus);
 
 // ── AI Affidavit Drafting ──

@@ -60,6 +60,46 @@ exports.getDashboard = (req, res) => {
   }
 };
 
+// GET /api/analytics/charts
+exports.getChartData = (req, res) => {
+  try {
+    const days = parseInt(req.query.range) || 30;
+    const scopeFilter = req._railwayScope ? ' AND c.railway = ?' : '';
+    const scopeParams = req._railwayScope ? [req._railwayScope] : [];
+
+    const statusDistribution = all(
+      `SELECT COALESCE(present_status, 'Pending') as status, COUNT(*) as count FROM cases c WHERE 1=1 ${scopeFilter} GROUP BY COALESCE(present_status, 'Pending') ORDER BY count DESC`,
+      scopeParams
+    );
+
+    const hearingsPerWeek = all(
+      `SELECT strftime('%W', hearing_date) as week, strftime('%Y-%m', hearing_date) as month, COUNT(*) as count
+       FROM hearing_history h JOIN cases c ON h.case_id = c.id
+       WHERE h.hearing_date >= DATE('now', '-' || ? || ' days') ${scopeFilter}
+       GROUP BY week, month ORDER BY month, week`,
+      [days, ...scopeParams]
+    );
+
+    const disposalsTrend = all(
+      `SELECT strftime('%Y-%m', updated_at) as month, COUNT(*) as count
+       FROM cases c
+       WHERE present_status = 'Disposed' AND updated_at >= DATE('now', '-365 days') ${scopeFilter}
+       GROUP BY month ORDER BY month`,
+      scopeParams
+    );
+
+    const casesByRailway = all(
+      `SELECT COALESCE(railway, 'Unknown') as railway, COUNT(*) as count FROM cases c WHERE 1=1 ${scopeFilter} GROUP BY railway ORDER BY count DESC`,
+      scopeParams
+    );
+
+    res.json({ statusDistribution, hearingsPerWeek, disposalsTrend, casesByRailway });
+  } catch (err) {
+    console.error('Analytics chart error:', err);
+    res.status(500).json({ error: 'Failed to generate chart data' });
+  }
+};
+
 // GET /api/analytics/health
 exports.getSystemHealth = (req, res) => {
   try {

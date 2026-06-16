@@ -63,14 +63,14 @@ async function fetchWithTimeout(url) {
 function parseDailyOrders(html) {
   const result = { hearings: [], pdfs: [], caseStatus: null };
   const rows = html.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
-  let inOrderSection = false;
+  let latestHearingRowTexts = null;
 
   for (const row of rows) {
     const cells = row.match(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]/gi) || [];
     const texts = cells.map(c => c.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim()).filter(Boolean);
 
     if (texts.some(t => t.includes('Final Order') || t.includes('Daily Orders'))) {
-      inOrderSection = true; continue;
+      continue;
     }
     if (texts.length >= 4 && /^\d+$/.test(texts[0])) {
       const date = parseDate(texts[1]);
@@ -79,9 +79,13 @@ function parseDailyOrders(html) {
           date, purpose: texts[2] || 'HEARING',
           nextDate: parseDate(texts[3]), status: texts[4] || null, nature: texts[5] || texts[2] || 'PROCEEDING',
         });
+        latestHearingRowTexts = texts;
       }
     }
-    if (texts.some(t => t.includes('DISMISSED') || t.includes('DISPOSED'))) result.caseStatus = 'Disposed';
+  }
+
+  if (latestHearingRowTexts && latestHearingRowTexts.some(t => /\b(?:DISMISSED|DISPOSED)\b/i.test(t))) {
+    result.caseStatus = 'Disposed';
   }
 
   // Extract PDF links
