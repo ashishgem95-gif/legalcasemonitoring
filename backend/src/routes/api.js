@@ -140,6 +140,19 @@ router.post('/sync/smart', syncLimiter, requireRole('Super Admin / Central Legal
 router.post('/sync/case/:id', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), resyncSingleCase);
 router.get('/sync/status', getSyncStatus);
 
+// ── High Court Lookup ──
+const { lookupCase: hcLookupCase, refreshAll: hcRefreshAll, listScrapers: hcListScrapers } = require('../controllers/hcController');
+const hcLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: 'Too many HC requests. Please wait a minute before trying again.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+router.get('/hc/lookup', authenticateToken, hcLimiter, hcLookupCase);
+router.post('/hc/refresh-all', requireRole('Super Admin / Central Legal Cell', 'admin'), hcRefreshAll);
+router.get('/hc/scrapers', authenticateToken, hcListScrapers);
+
 // ── AI Affidavit Drafting ──
 router.post('/ai/draft-reply',
   requireRole('Super Admin / Central Legal Cell', 'admin'),

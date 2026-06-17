@@ -145,7 +145,11 @@ exports.resyncSingleCase = async (req, res) => {
     const { runSmartSyncForCase } = require('../services/smartSync');
     const { get } = require('../config/dbHelper');
 
-    const caseRecord = get('SELECT id, railway, case_ref_no FROM cases WHERE id = ?', [caseId]);
+    // Fetch the full case record so we can decide which sync engine to use
+    const caseRecord = get(
+      'SELECT id, railway, case_ref_no, forum, case_type, case_number, case_year FROM cases WHERE id = ?',
+      [caseId]
+    );
     if (!caseRecord) {
       return res.status(404).json({ error: `Case ${caseId} not found` });
     }
@@ -154,6 +158,41 @@ exports.resyncSingleCase = async (req, res) => {
       return res.status(403).json({ error: 'Access denied to this case.' });
     }
 
+    // Route HC cases to the new HC lookup service. Other forums (CAT, etc.)
+    // continue to use the existing CAT/eCourtsIndia smart sync engine.
+    if (caseRecord.forum && String(caseRecord.forum).startsWith('HC/')) {
+      try {
+        const { lookupHcCase } = require('../services/hcLookupService');
+        const data = await lookupHcCase(
+          caseRecord.forum,
+          caseRecord.case_type,
+          caseRecord.case_number,
+          caseRecord.case_year
+        );
+        logger.info({ caseId, forum: caseRecord.forum, source: data.source }, 'HC resync success');
+        return res.json({
+          status: 'success',
+          caseId,
+          caseRefNo: caseRecord.case_ref_no,
+          source: 'hc-scraper',
+          ...data,
+        });
+      } catch (err) {
+        if (err.status === 501) {
+          // No scraper registered for this HC — return 501 with a clear message
+          return res.status(501).json({
+            status: 'not_implemented',
+            error: err.message,
+            caseId,
+            caseRefNo: caseRecord.case_ref_no,
+            forum: caseRecord.forum,
+          });
+        }
+        throw err;
+      }
+    }
+
+    // Default path: CAT / eCourtsIndia smart sync
     const result = await runSmartSyncForCase(caseId);
     res.json({ status: 'success', caseId, caseRefNo: caseRecord.case_ref_no, ...result });
   } catch (err) {
