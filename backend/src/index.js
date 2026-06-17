@@ -114,6 +114,12 @@ const server = app.listen(PORT, () => {
     logger.info({ registered: getRegisteredScrapers() }, 'HC scrapers auto-registered at startup');
   } catch (e) { logger.error({ err: e }, 'Failed to register HC scrapers at startup'); }
 
+  // Initialize HC nightly scheduler (02:00 IST daily refresh)
+  try {
+    const hcScheduler = require('./services/hcScheduler');
+    hcScheduler.initHcScheduler();
+  } catch (e) { logger.error({ err: e }, 'Failed to init HC scheduler'); }
+
   // Check hearing reminders every 4 hours
   try {
     const emailService = require('./services/emailService');
