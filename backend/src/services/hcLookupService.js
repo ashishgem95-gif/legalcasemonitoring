@@ -82,6 +82,8 @@ async function lookupHcCase(courtCode, caseType, caseNumber, caseYear) {
   }
 
   // 3. Call the scraper
+  // Scraper functions receive a single context object so they can destructure
+  // only the fields they need and ignore the rest.
   logger.info({ courtCode, caseType, caseNumber, caseYear }, 'HC cache miss — calling scraper');
   const result = await scraper({ courtCode, caseType, caseNumber, caseYear });
   const payloadJson = JSON.stringify(result);

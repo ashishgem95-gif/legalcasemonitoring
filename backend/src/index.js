@@ -102,6 +102,18 @@ const server = app.listen(PORT, () => {
     backupService.initBackupScheduler();
   } catch (e) { logger.error({ err: e }, 'Failed to init backup scheduler'); }
 
+  // Register High Court scrapers. Today: Delhi HC. Tomorrow: 12 more.
+  // We do this in the same try/catch pattern so a failed scraper load
+  // doesn't crash the server — the system can still start and respond
+  // to other requests. The HC routes will return 501 for unregistered HCs.
+  try {
+    const { registerHcScraper } = require('./services/hcLookupService');
+    const { scrape: delhiScrape } = require('./services/delhiHcScraper');
+    registerHcScraper('HC/Delhi', delhiScrape);
+    const { getRegisteredScrapers } = require('./services/hcLookupService');
+    logger.info({ registered: getRegisteredScrapers() }, 'HC scrapers auto-registered at startup');
+  } catch (e) { logger.error({ err: e }, 'Failed to register HC scrapers at startup'); }
+
   // Check hearing reminders every 4 hours
   try {
     const emailService = require('./services/emailService');

@@ -104,7 +104,8 @@ async function scrape({ courtCode, caseType, caseNumber, caseYear }) {
     // PLACEHOLDER selectors — adjust after live test
     // The form may have fields like: #case_type, #case_no, #case_year
     // OR name="case_type" etc. We'll try a few common patterns.
-    const formFilled = await page.evaluate((type, number, year) => {
+    // Note: page.evaluate only accepts a single argument. Pass an object.
+    const formFilled = await page.evaluate(({ type, number, year }) => {
       const trySelectors = (selectors, value) => {
         for (const sel of selectors) {
           const el = document.querySelector(sel);
@@ -129,7 +130,7 @@ async function scrape({ courtCode, caseType, caseNumber, caseYear }) {
         String(year)
       );
       return { typeFilled, numberFilled, yearFilled };
-    }, caseType, caseNumber, caseYear);
+    }, { type: caseType, number: caseNumber, year: caseYear });
 
     if (!formFilled.typeFilled || !formFilled.numberFilled || !formFilled.yearFilled) {
       result.error = `Delhi HC: form fields not found (type=${formFilled.typeFilled}, number=${formFilled.numberFilled}, year=${formFilled.yearFilled}). Inspect selectors.`;
