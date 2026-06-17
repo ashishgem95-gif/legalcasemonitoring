@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "test": "node src/tests/api.test.js && node src/tests/test-part1.js && node src/tests/test-part2.js && node src/tests/test-part3.js"
+    "test": "node src/tests/api.test.js && node src/tests/test-part1.js && node src/tests/test-part2.js && node src/tests/test-part3.js",
+    "test:hc": "HC_TEST_MODE=1 node --test src/tests/hc/*.test.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.1",

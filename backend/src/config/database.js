@@ -4,7 +4,12 @@ const crypto = require('crypto');
 
 const PASSWORD_ITERATIONS = 600000;
 
-const dbPath = path.resolve(__dirname, '..', '..', '..', 'legal_tracker.db');
+// In HC_TEST_MODE, use a separate test database so cache tests don't pollute
+// the main legal_tracker.db. The test DB starts empty (no migrations needed
+// for the cache tests because they only exercise the hc_case_cache table).
+const dbPath = process.env.HC_TEST_MODE === '1'
+  ? path.resolve(__dirname, '..', '..', '..', 'legal_tracker.test.db')
+  : path.resolve(__dirname, '..', '..', '..', 'legal_tracker.db');
 
 const db = new Database(dbPath);
 
@@ -264,7 +269,7 @@ db.exec(`
     password_iterations INTEGER DEFAULT ${PASSWORD_ITERATIONS},
     role VARCHAR NOT NULL,
     railway_scope VARCHAR NOT NULL,
-    desc TEXT,
+    description TEXT,
     last_seen_alerts_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
@@ -432,6 +437,35 @@ db.exec(`
   );
 `);
 console.log('ai_settings table verified/created.');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS schema_migrations (
+    name TEXT PRIMARY KEY,
+    applied_at TEXT NOT NULL
+  );
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS hc_case_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    court_code VARCHAR NOT NULL,
+    case_type VARCHAR NOT NULL,
+    case_number VARCHAR NOT NULL,
+    case_year INTEGER NOT NULL,
+    payload_json TEXT NOT NULL,
+    party_names TEXT,
+    case_status VARCHAR,
+    next_hearing_date DATE,
+    latest_order_link VARCHAR,
+    history_link VARCHAR,
+    source VARCHAR DEFAULT 'live',
+    is_stale INTEGER DEFAULT 0,
+    fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    UNIQUE(court_code, case_type, case_number, case_year)
+  );
+`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_hc_cache_expiry ON hc_case_cache(expires_at);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_hc_cache_lookup ON hc_case_cache(court_code, case_type, case_number, case_year);`);
 
 db.exec(`CREATE INDEX IF NOT EXISTS idx_cases_railway ON cases(railway);`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_case_alerts_is_read ON case_alerts(is_read);`);

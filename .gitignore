@@ -8,5 +8,6 @@ dist/
 *.db-shm
 *.db-wal
 *.db.pre-*.bak
+legal_tracker.test.db
 backend/uploads/
 backups/

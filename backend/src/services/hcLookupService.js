@@ -36,6 +36,14 @@ function getRegisteredScrapers() {
 }
 
 /**
+ * Test-only: clear the scraper registry. Used between tests to ensure isolation.
+ * Not part of the public API — exported with underscore prefix by convention.
+ */
+function _resetForTests() {
+  for (const key of Object.keys(scrapers)) delete scrapers[key];
+}
+
+/**
  * Look up a High Court case. Returns cached result if available + not expired,
  * otherwise calls the registered scraper and caches the result.
  */
@@ -161,5 +169,6 @@ module.exports = {
   getRegisteredScrapers,
   lookupHcCase,
   refreshDueHcCases,
+  _resetForTests,
   CACHE_TTL_HOURS,
 };

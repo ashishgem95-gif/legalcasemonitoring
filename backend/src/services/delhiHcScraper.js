@@ -34,6 +34,7 @@ const DISPOSED_STATUSES = ['DISPOSED', 'DISMISSED', 'DECIDED', 'CLOSED', 'WITHDR
 function normalizeStatus(rawText) {
   if (!rawText) return null;
   const t = String(rawText).trim().toUpperCase();
+  if (!t) return null; // whitespace-only input is treated as no input
   if (DISPOSED_STATUSES.includes(t) || t.includes('DISPOSE') || t.includes('DECIDED')) return 'Disposed';
   if (t.includes('PENDING') || t.includes('ADJOURNED') || t.includes('HEARING')) return 'Pending';
   return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
