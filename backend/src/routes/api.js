@@ -52,9 +52,10 @@ router.get('/cases/:id/hearings', getHearingsForCase);
 router.post('/cases/:id/hearings', validate(hearingSchema), addHearingToCase);
 
 // ── Citations ──
-const { getCitations, createCitation, updateCitation, deleteCitation } = require('../controllers/citationController');
+const { getCitations, createCitation, updateCitation, deleteCitation, parseCitationPdf } = require('../controllers/citationController');
 router.get('/citations', getCitations);
 router.post('/citations', validate(citationSchema), createCitation);
+router.post('/citations/parse-pdf', upload.single('file'), parseCitationPdf);
 router.put('/citations/:id', requireRole('Super Admin / Central Legal Cell', 'admin'), validate(citationSchema), updateCitation);
 router.delete('/citations/:id', requireRole('Super Admin / Central Legal Cell', 'admin'), deleteCitation);
 
@@ -92,10 +93,11 @@ router.get('/reports/zone-distribution', enforceScope, getZoneDistribution);
 router.get('/reports/export', enforceScope, exportCases);
 
 // ── Analytics ──
-const { getDashboard, getSystemHealth, getChartData } = require('../controllers/analyticsController');
+const { getDashboard, getSystemHealth, getChartData, getInsights } = require('../controllers/analyticsController');
 router.get('/analytics/dashboard', enforceScope, getDashboard);
 router.get('/analytics/health', getSystemHealth);
 router.get('/analytics/charts', enforceScope, getChartData);
+router.get('/analytics/insights', enforceScope, getInsights);
 
 // ── Bulk Operations ──
 const { bulkUpdate } = require('../controllers/bulkController');

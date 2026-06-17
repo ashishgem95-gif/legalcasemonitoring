@@ -23,6 +23,7 @@ function getAiHeaders() {
   return {
     'x-ai-provider': localStorage.getItem('ccms_provider') || 'gemini',
     'x-ai-model': localStorage.getItem('ccms_model') || '',
+    'x-ai-api-key': localStorage.getItem('ccms_apikey') || '',
   };
 }
 
@@ -122,6 +123,11 @@ export const api = {
   createCitation: (data) => request('/citations', { method: 'POST', body: data }),
   updateCitation: (id, data) => request(`/citations/${id}`, { method: 'PUT', body: data }),
   deleteCitation: (id) => request(`/citations/${id}`, { method: 'DELETE' }),
+  parseCitationPdf: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return requestWithAi('/citations/parse-pdf', { method: 'POST', body: formData });
+  },
 
   // Documents (Court Orders, PDFs)
   getDocumentsForCase: (caseId) => request(`/cases/${caseId}/documents`),
@@ -202,6 +208,8 @@ export const api = {
   resyncCase: (caseId) => request(`/sync/case/${caseId}`, { method: 'POST' }),
 
   getAnalyticsCharts: (range = 30) => request(`/analytics/charts?range=${encodeURIComponent(range)}`),
+  getAnalyticsDashboard: () => request('/analytics/dashboard'),
+  getAnalyticsInsights: () => request('/analytics/insights'),
 
   getFileActivity: () => request('/admin/file-activity'),
   markAlertsSeen: () => request('/admin/file-activity/seen', { method: 'POST' }),

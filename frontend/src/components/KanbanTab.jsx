@@ -4,6 +4,7 @@ import CaseCard from './CaseCard';
 import { format, addDays, startOfDay, isBefore, isAfter, isToday, isTomorrow, differenceInDays } from 'date-fns';
 
 const COLUMNS = [
+  { id: 'awaitingOrders', label: 'Awaiting Orders', tone: 'danger', filter: (c) => Boolean(c.has_pending_order_upload) },
   { id: 'today', label: 'Today', filter: (c, today) => c.next_hearing_date && isToday(new Date(c.next_hearing_date)) },
   { id: 'tomorrow', label: 'Tomorrow', filter: (c, today) => c.next_hearing_date && isTomorrow(new Date(c.next_hearing_date)) },
   { id: 'thisWeek', label: 'This Week', filter: (c, today) => {
@@ -24,12 +25,6 @@ const COLUMNS = [
     const diff = differenceInDays(d, today);
     return diff > 14 && diff <= 30;
   }},
-  { id: 'later', label: 'Later', filter: (c, today) => {
-    if (!c.next_hearing_date) return false;
-    const d = new Date(c.next_hearing_date);
-    return differenceInDays(d, today) > 30;
-  }},
-  { id: 'history', label: 'History / No Date', filter: (c, today) => !c.next_hearing_date || isBefore(new Date(c.next_hearing_date), today) },
 ];
 
 export default function KanbanTab({ refreshKey }) {
@@ -47,7 +42,15 @@ export default function KanbanTab({ refreshKey }) {
     setLoading(true);
     try {
       const data = await api.getCases();
-      setCases(data || []);
+      const localToday = startOfDay(new Date());
+      const filteredData = (data || []).filter(c => {
+        if (c.has_pending_order_upload) return true;
+        if (!c.next_hearing_date) return false;
+        const d = new Date(c.next_hearing_date);
+        const diff = differenceInDays(d, localToday);
+        return diff >= 0 && diff <= 30;
+      });
+      setCases(filteredData);
     } catch (err) {
       console.error('Failed to load cases:', err);
     } finally {
@@ -104,14 +107,16 @@ export default function KanbanTab({ refreshKey }) {
           {COLUMNS.map(col => {
             const columnCases = filtered.filter(c => col.filter(c, today));
             return (
-              <div key={col.id} className="kanban-column">
-                <div className="kanban-column-header">
+              <div key={col.id} className={`kanban-column ${col.tone ? `tone-${col.tone}` : ''}`}>
+                <div className={`kanban-column-header ${col.tone ? `tone-${col.tone}` : ''}`}>
                   <span>{col.label}</span>
                   <span className="kanban-count">{columnCases.length}</span>
                 </div>
-                {columnCases.map(c => (
-                  <CaseCard key={c.id} caseItem={c} />
-                ))}
+                <div className="kanban-column-body">
+                  {columnCases.map(c => (
+                    <CaseCard key={c.id} caseItem={c} />
+                  ))}
+                </div>
               </div>
             );
           })}

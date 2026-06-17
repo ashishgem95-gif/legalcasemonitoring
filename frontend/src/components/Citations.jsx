@@ -22,6 +22,11 @@ export default function Citations() {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  // PDF upload + AI auto-fill state
+  const [pdfFile, setPdfFile] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiError, setAiError] = useState(null);
+
   useEffect(() => {
     fetchCitations();
   }, []);
@@ -79,6 +84,35 @@ export default function Citations() {
     setIsEditMode(false);
     setEditingId(null);
     setShowAddForm(false);
+    setPdfFile(null);
+    setIsAnalyzing(false);
+    setAiError(null);
+  };
+
+  const handlePdfUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setPdfFile(file);
+    setIsAnalyzing(true);
+    setAiError(null);
+    try {
+      const result = await api.parseCitationPdf(file);
+      if (result.error) {
+        setAiError(result.error);
+      } else {
+        setNewCitation(prev => ({
+          ...prev,
+          category: result.category || prev.category,
+          title: result.title || prev.title,
+          description: result.description || prev.description,
+          where_to_cite: result.where_to_cite || prev.where_to_cite,
+        }));
+      }
+    } catch (err) {
+      setAiError(err.message || 'Failed to analyze PDF. Please enter details manually.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -233,7 +267,7 @@ export default function Citations() {
       {/* Add Citation Modal */}
       {showAddForm && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ background: '#fff', border: '1px solid #9ca3af' }}>
+          <div className="modal-content" style={{ background: '#fff', border: '1px solid #9ca3af', maxWidth: '580px' }}>
             <div className="modal-header" style={{ borderBottom: '1px solid #e5e7eb' }}>
               <h3 style={{ color: '#0f2c59', fontWeight: 700 }}>
                 {isEditMode ? 'संपादित करें / Edit Judicial Precedent' : 'नया संदर्भ जोड़ें / Add Judicial Precedent'}
@@ -242,6 +276,77 @@ export default function Citations() {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
+                {/* PDF Upload Section */}
+                <div className="citation-pdf-section">
+                  <label className="citation-pdf-label">
+                    <svg width="18" height="18" fill="none" stroke="#4b5563" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                    <span>Upload Judgment PDF for AI Auto-Fill</span>
+                    <span className="citation-pdf-hint">PDF should be text-searchable</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handlePdfUpload}
+                    style={{ display: 'none' }}
+                    id="citation-pdf-input"
+                  />
+                  <label htmlFor="citation-pdf-input" className="citation-pdf-drop">
+                    {isAnalyzing ? (
+                      <div className="citation-analyzing">
+                        <div className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
+                        <span>Analyzing PDF with AI...</span>
+                      </div>
+                    ) : pdfFile ? (
+                      <div className="citation-pdf-loaded">
+                        <svg width="16" height="16" fill="none" stroke="#059669" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span>{pdfFile.name}</span>
+                        <button
+                          type="button"
+                          className="citation-pdf-change"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPdfFile(null);
+                            setAiError(null);
+                            document.getElementById('citation-pdf-input').value = '';
+                          }}
+                        >
+                          Change
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="citation-pdf-placeholder">
+                        <svg width="28" height="28" fill="none" stroke="#9ca3af" strokeWidth="1.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                        <span>Click to upload judgment PDF</span>
+                        <span className="citation-pdf-or">or fill manually below</span>
+                      </div>
+                    )}
+                  </label>
+                  {aiError && (
+                    <div className="citation-ai-error">
+                      <svg width="14" height="14" fill="none" stroke="#dc2626" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      {aiError}
+                    </div>
+                  )}
+                  {!aiError && !isAnalyzing && pdfFile && (
+                    <div className="citation-ai-success">
+                      <svg width="14" height="14" fill="none" stroke="#059669" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      AI analysis complete — review below
+                    </div>
+                  )}
+                </div>
+
+                <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '0.5rem 0 1rem 0' }} />
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   <div className="form-group">
                     <label className="form-label" style={{ color: '#4b5563' }}>Category</label>

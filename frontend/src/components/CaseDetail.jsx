@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
-import HearingTimeline from './HearingTimeline';
 import AddHearingModal from './AddHearingModal';
 
 const PROGRESSION_STAGES = [
@@ -83,7 +82,6 @@ export default function CaseDetail() {
   };
 
   const [isAddHearingOpen, setIsAddHearingOpen] = useState(false);
-  const [hearingSortAsc, setHearingSortAsc] = useState(false);
   const [isAddAffidavitOpen, setIsAddAffidavitOpen] = useState(false);
   const [affidavitSubmitting, setAffidavitSubmitting] = useState(false);
   const [affidavitError, setAffidavitError] = useState(null);
@@ -700,7 +698,12 @@ export default function CaseDetail() {
           {/* Activity Timeline + Pleadings side-by-side */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', margin: '1.5rem 0' }}>
             <div className="card" style={{ padding: '1rem' }}>
-              <strong style={{ fontSize: '0.9rem', color: '#0f2c59', display: 'block', marginBottom: '0.75rem' }}>Activity Timeline</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <strong style={{ fontSize: '0.9rem', color: '#0f2c59' }}>Activity Timeline</strong>
+                <button className="btn btn-primary" style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }} onClick={() => setIsAddHearingOpen(true)}>
+                  + Record Hearing
+                </button>
+              </div>
               <div style={{ position: 'relative', paddingLeft: '1rem', fontSize: '0.78rem' }}>
                 {[...(hearings || [])].sort((a,b) => new Date(b.hearing_date) - new Date(a.hearing_date)).slice(0, 8).map((h, i) => (
                   <div key={i} style={{ position: 'relative', paddingBottom: '0.6rem', borderLeft: '2px solid #e5e7eb', paddingLeft: '0.75rem' }}>
@@ -744,31 +747,7 @@ export default function CaseDetail() {
             </div>
           </div>
 
-          {/* Timeline Section */}
-          <div>
-            <div className="timeline-section-header" style={{ borderBottom: '2px solid #0f2c59', marginTop: '1rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f2c59', margin: 0 }}>सुनवाई इतिहास लॉग / Chronological Hearing Timeline</h2>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="btn btn-secondary btn-sm" onClick={() => setHearingSortAsc(!hearingSortAsc)}>
-                  {hearingSortAsc ? '↑ Oldest First' : '↓ Newest First'}
-                </button>
-                <button className="btn btn-primary" onClick={() => setIsAddHearingOpen(true)}>
-                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
-                  </svg>
-                  Record New Hearing
-                </button>
-              </div>
-            </div>
-
-            <HearingTimeline hearings={
-              hearingSortAsc
-                ? [...hearings].sort((a, b) => new Date(a.hearing_date) - new Date(b.hearing_date))
-                : [...hearings].sort((a, b) => new Date(b.hearing_date) - new Date(a.hearing_date))
-            } />
-          </div>
         </div>
-
         {/* Right Side: Milestones & Litigants & Contacts */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           

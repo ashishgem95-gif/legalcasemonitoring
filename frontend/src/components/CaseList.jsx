@@ -159,7 +159,8 @@ export default function CaseList() {
     if (selectedStatus !== 'All') {
       const sClass = getStatusClass(c.present_status);
       const selClass = selectedStatus.toLowerCase();
-      if (selClass === 'disposed') matchesStatus = sClass === 'disposed';
+      if (selectedStatus === 'Active') matchesStatus = sClass !== 'disposed';
+      else if (selClass === 'disposed') matchesStatus = sClass === 'disposed';
       else if (selClass === 'sine die') matchesStatus = sClass === 'sinedie';
       else if (selClass === 'urgent') matchesStatus = sClass === 'urgent';
       else if (selClass === 'pending') matchesStatus = sClass === 'pending';
@@ -250,6 +251,7 @@ export default function CaseList() {
             <label className="filter-label" style={{ color: '#374151' }}>Status:</label>
             <select className="select-input" style={{ background: '#f9fafb', borderColor: '#d1d5db', color: '#111827' }} value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
               <option value="All">All Statuses</option>
+              <option value="Active">Active</option>
               <option value="Pending">Pending</option>
               <option value="Disposed">Disposed</option>
               <option value="Urgent">Urgent</option>
@@ -380,6 +382,39 @@ export default function CaseList() {
                       >
                         <span className="drag-handle-dots">⋮⋮</span>
                         {col.label}{sortCol === col.id ? (sortAsc ? ' ↑' : ' ↓') : ''}
+                        {col.id === 'status' && (
+                          <div
+                            className="status-column-filter"
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onDragStart={(e) => e.preventDefault()}
+                          >
+                            <button
+                              type="button"
+                              className={`status-chip chip-active ${selectedStatus === 'Active' ? 'selected' : ''}`}
+                              onClick={() => setSelectedStatus(selectedStatus === 'Active' ? 'All' : 'Active')}
+                              title="Show only active (non-disposed) cases"
+                            >
+                              Active
+                            </button>
+                            <button
+                              type="button"
+                              className={`status-chip chip-disposed ${selectedStatus === 'Disposed' ? 'selected' : ''}`}
+                              onClick={() => setSelectedStatus(selectedStatus === 'Disposed' ? 'All' : 'Disposed')}
+                              title="Show only disposed cases"
+                            >
+                              Disposed
+                            </button>
+                            <button
+                              type="button"
+                              className={`status-chip chip-all ${selectedStatus === 'All' ? 'selected' : ''}`}
+                              onClick={() => setSelectedStatus('All')}
+                              title="Clear status filter"
+                            >
+                              All
+                            </button>
+                          </div>
+                        )}
                       </th>
                     ))}
                   </tr>

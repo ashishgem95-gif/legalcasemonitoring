@@ -14,7 +14,9 @@ exports.getDashboard = (req, res) => {
     const today = new Date().toISOString().split('T')[0];
     const weekEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const upcomingHearings = get(
-      `SELECT COUNT(*) as c FROM hearing_history h JOIN cases c ON h.case_id = c.id WHERE h.hearing_date BETWEEN ? AND ?${req._railwayScope ? ' AND c.railway = ?' : ''}`,
+      `SELECT COUNT(*) as c FROM cases
+       WHERE next_hearing_date BETWEEN ? AND ?
+         AND COALESCE(present_status, 'Pending') != 'Disposed' ${scopeFilter}`,
       [today, weekEnd, ...scopeParams]
     ).c;
 
@@ -97,6 +99,77 @@ exports.getChartData = (req, res) => {
   } catch (err) {
     console.error('Analytics chart error:', err);
     res.status(500).json({ error: 'Failed to generate chart data' });
+  }
+};
+
+// GET /api/analytics/insights
+exports.getInsights = (req, res) => {
+  try {
+    const scopeFilter = req._railwayScope ? ' AND railway = ?' : '';
+    const scopeParams = req._railwayScope ? [req._railwayScope] : [];
+
+    const advocateStats = all(
+      `SELECT COALESCE(advocate_name, 'Unassigned') as name,
+              COUNT(*) as total,
+              SUM(CASE WHEN COALESCE(present_status, 'Pending') = 'Disposed' THEN 1 ELSE 0 END) as disposed
+       FROM cases WHERE 1=1 ${scopeFilter}
+       GROUP BY advocate_name ORDER BY total DESC LIMIT 8`,
+      scopeParams
+    );
+
+    const nodalStats = all(
+      `SELECT COALESCE(nodal_officer_name, 'Unassigned') as name,
+              COUNT(*) as total,
+              SUM(CASE WHEN COALESCE(present_status, 'Pending') != 'Disposed' THEN 1 ELSE 0 END) as pending
+       FROM cases WHERE 1=1 ${scopeFilter}
+       GROUP BY nodal_officer_name ORDER BY pending DESC LIMIT 8`,
+      scopeParams
+    );
+
+    const forumPending = all(
+      `SELECT COALESCE(forum, 'Unknown') as forum,
+              COUNT(*) as pending
+       FROM cases
+       WHERE COALESCE(present_status, 'Pending') != 'Disposed' ${scopeFilter}
+       GROUP BY forum ORDER BY pending DESC LIMIT 8`,
+      scopeParams
+    );
+
+    const agingReplies = all(
+      `SELECT id, case_ref_no, forum, railway, last_date_reply,
+              CAST(julianday('now') - julianday(last_date_reply) AS INTEGER) as days_overdue
+       FROM cases
+       WHERE last_date_reply IS NOT NULL AND date_filing_reply IS NULL
+         AND julianday(last_date_reply) < julianday('now') ${scopeFilter}
+       ORDER BY days_overdue DESC LIMIT 10`,
+      scopeParams
+    );
+
+    const agingRepliesCount = get(
+      `SELECT COUNT(*) as c FROM cases
+       WHERE last_date_reply IS NOT NULL AND date_filing_reply IS NULL
+         AND julianday(last_date_reply) < julianday('now') ${scopeFilter}`,
+      scopeParams
+    ).c;
+
+    const avgDisposalDays = get(
+      `SELECT AVG(CAST(julianday(updated_at) - julianday(created_at) AS INTEGER)) as avg_days
+       FROM cases
+       WHERE present_status = 'Disposed' ${scopeFilter}`,
+      scopeParams
+    ).avg_days;
+
+    res.json({
+      advocateStats,
+      nodalStats,
+      forumPending,
+      agingReplies,
+      agingRepliesCount,
+      avgDisposalDays: avgDisposalDays != null ? Math.round(avgDisposalDays) : null
+    });
+  } catch (err) {
+    console.error('Analytics insights error:', err);
+    res.status(500).json({ error: 'Failed to generate insights' });
   }
 };
 

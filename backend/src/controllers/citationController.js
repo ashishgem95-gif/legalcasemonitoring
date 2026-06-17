@@ -1,4 +1,6 @@
 const { run, get, all } = require('../config/dbHelper');
+const pdfParse = require('pdf-parse');
+const { parseCitationFromText } = require('../services/citationParser');
 
 // GET /api/citations
 exports.getCitations = (req, res) => {
@@ -70,5 +72,27 @@ exports.deleteCitation = (req, res) => {
   } catch (err) {
     console.error('Error deleting citation:', err.message);
     res.status(500).json({ error: 'Failed to delete citation' });
+  }
+};
+
+// POST /api/citations/parse-pdf
+exports.parseCitationPdf = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No PDF file uploaded.' });
+    }
+    const pdfData = await pdfParse(req.file.buffer);
+    const text = pdfData.text;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Failed to extract text from PDF. The document might be scanned as an image. Try a text-searchable PDF.' });
+    }
+    const result = await parseCitationFromText(text, req.headers);
+    if (result.error) {
+      return res.status(422).json(result);
+    }
+    res.json(result);
+  } catch (err) {
+    console.error('Error parsing citation PDF:', err.message);
+    res.status(500).json({ error: 'Failed to analyze the PDF. Please try again or enter details manually.' });
   }
 };

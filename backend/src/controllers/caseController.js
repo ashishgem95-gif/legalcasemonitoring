@@ -11,7 +11,17 @@ const getCases = async (req, res) => {
     const { search, status, case_type, railway } = req.query;
     let query = `
       SELECT c.*,
-             COALESCE(c.next_hearing_date, (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id)) AS next_hearing_date
+             COALESCE(c.next_hearing_date, (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id)) AS next_hearing_date,
+             (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id) AS last_hearing_date,
+             (SELECT order_raw_text FROM hearing_history WHERE case_id = c.id ORDER BY hearing_date DESC LIMIT 1) AS last_hearing_order,
+             CASE
+               WHEN COALESCE(c.present_status, 'Pending') = 'Disposed' THEN 0
+               WHEN (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id) IS NULL THEN 0
+               WHEN (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id) >= DATE('now') THEN 0
+               WHEN (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id) < DATE('now', '-30 days') THEN 0
+               WHEN COALESCE((SELECT order_raw_text FROM hearing_history WHERE case_id = c.id ORDER BY hearing_date DESC LIMIT 1), '') = '' THEN 1
+               ELSE 0
+             END AS has_pending_order_upload
       FROM cases c
       WHERE 1=1
     `;
