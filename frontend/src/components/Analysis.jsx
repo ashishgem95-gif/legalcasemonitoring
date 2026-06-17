@@ -4,7 +4,7 @@ import CalendarTab from './CalendarTab';
 import AnalyticsTab from './AnalyticsTab';
 import './Dashboard.css';
 
-export default function Dashboard() {
+export default function Analysis() {
   const [activeTab, setActiveTab] = useState('kanban');
   const [refreshKey, setRefreshKey] = useState(0);
 

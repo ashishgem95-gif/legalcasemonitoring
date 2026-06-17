@@ -269,6 +269,18 @@ export default function CaseDetail() {
     }
   };
 
+  const handleToggleOrderUploaded = async (hearingId, newValue) => {
+    try {
+      await api.setHearingOrderUploaded(caseObj.id, hearingId, newValue);
+      setHearings(prev => prev.map(h =>
+        h.id === hearingId ? { ...h, order_uploaded: newValue ? 1 : 0 } : h
+      ));
+    } catch (err) {
+      console.error('Failed to update order_uploaded:', err);
+      alert('Failed to update. Please try again. / अपडेट विफल। कृपया पुनः प्रयास करें।');
+    }
+  };
+
   const handleDeleteAffidavit = async (affId) => {
     if (window.confirm('Are you sure you want to delete this affidavit record? / क्या आप वाकई इस शपथ पत्र रिकॉर्ड को हटाना चाहते हैं?')) {
       try {
@@ -497,17 +509,8 @@ export default function CaseDetail() {
             </div>
 
             <div style={{ marginTop: '1.5rem' }}>
-              <span className="metadata-label" style={{ display: 'block', marginBottom: '0.5rem', color: '#4b5563' }}>विवाद का संक्षिप्त विवरण / Issue Synopsis</span>
-              <div style={{ 
-                background: '#f9fafb', 
-                padding: '1.25rem', 
-                borderRadius: '10px', 
-                border: '1px solid #e5e7eb', 
-                lineHeight: '1.6',
-                color: '#374151',
-                fontSize: '0.95rem',
-                whiteSpace: 'pre-wrap'
-              }}>
+              <span className="metadata-label">विवाद का संक्षिप्त विवरण / Issue Synopsis</span>
+              <div className="synopsis-box">
                 {caseObj.synopsis || 'No synopsis described for this case.'}
               </div>
             </div>
@@ -706,10 +709,20 @@ export default function CaseDetail() {
               </div>
               <div style={{ position: 'relative', paddingLeft: '1rem', fontSize: '0.78rem' }}>
                 {[...(hearings || [])].sort((a,b) => new Date(b.hearing_date) - new Date(a.hearing_date)).slice(0, 8).map((h, i) => (
-                  <div key={i} style={{ position: 'relative', paddingBottom: '0.6rem', borderLeft: '2px solid #e5e7eb', paddingLeft: '0.75rem' }}>
-                    <div style={{ position: 'absolute', left: '-5px', top: '5px', width: '9px', height: '9px', borderRadius: '50%', background: '#0f2c59' }} />
-                    <span style={{ fontWeight: 600 }}>{new Date(h.hearing_date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}).replace(/\//g, '-')}</span>
-                    <span style={{ color: '#4b5563', display: 'block', marginTop: '0.1rem' }}>{(h.order_summary || '').substring(0, 120)}</span>
+                  <div key={h.id || i} className="hearing-timeline-item">
+                    <div className="hearing-timeline-dot" />
+                    <div className="hearing-timeline-body">
+                      <div className="hearing-timeline-date">{new Date(h.hearing_date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}).replace(/\//g, '-')}</div>
+                      <div className="hearing-timeline-summary">{(h.order_summary || '').substring(0, 120)}</div>
+                    </div>
+                    <button
+                      type="button"
+                      className={`hearing-order-toggle ${h.order_uploaded ? 'uploaded' : 'pending'}`}
+                      onClick={() => handleToggleOrderUploaded(h.id, !h.order_uploaded)}
+                      title={h.order_uploaded ? 'Click to mark order as not uploaded' : 'Click to mark order as uploaded'}
+                    >
+                      {h.order_uploaded ? '✓ Uploaded' : '☐ Awaiting'}
+                    </button>
                   </div>
                 ))}
                 {(!hearings || hearings.length === 0) && <span style={{ color: '#9ca3af' }}>No hearing records yet</span>}

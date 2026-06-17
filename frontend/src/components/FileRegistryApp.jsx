@@ -4,7 +4,6 @@ import './FileRegistry.css';
 
 export default function FileRegistryApp() {
   const [activeTab, setActiveTab] = useState('registry'); // 'dashboard', 'registry', 'movements', 'personnel', 'track'
-  const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -61,6 +60,18 @@ export default function FileRegistryApp() {
 
   // Unique list of zonal railways from files for filter dropdown
   const uniqueRailways = ['All Railways', ...new Set(files.map(f => f.zonal_railway).filter(Boolean))];
+
+  // Map file status -> main-site .pill variant (for unified design language)
+  const statusToPill = (status) => {
+    switch ((status || '').toUpperCase()) {
+      case 'ACTIVE': return 'pill-success';
+      case 'CHECKED_OUT': return 'pill-info';
+      case 'IN_TRANSIT': return 'pill-warning';
+      case 'ARCHIVED': return 'pill-neutral';
+      case 'LOST': return 'pill-danger';
+      default: return 'pill-neutral';
+    }
+  };
 
   // Initial Data Fetching
   useEffect(() => {
@@ -343,7 +354,7 @@ export default function FileRegistryApp() {
   }, {});
 
   return (
-    <div className={`docuflow-container ${darkMode ? 'dark-mode' : ''}`}>
+    <div className="docuflow-container">
       {/* Sidebar navigation */}
       <aside className="docuflow-sidebar">
         <div className="df-sidebar-logo">
@@ -352,7 +363,7 @@ export default function FileRegistryApp() {
               <path d="M19.5 21a3 3 0 003-3v-4.5a3 3 0 00-3-3h-15a3 3 0 00-3 3V18a3 3 0 003 3h15zM21.5 7.5a3 3 0 00-3-3h-15a3 3 0 00-3 3V9h21V7.5z" />
             </svg>
           </div>
-          <span className="df-logo-text">DocuFlow</span>
+          <span className="df-logo-text">फाइल पंजी / DocuFlow</span>
         </div>
 
         <nav className="df-sidebar-menu">
@@ -389,18 +400,7 @@ export default function FileRegistryApp() {
         </nav>
 
         <div className="df-sidebar-footer">
-          <div className="df-theme-toggle">
-            <span>Dark Mode</span>
-            <label className="df-toggle-switch">
-              <input 
-                type="checkbox" 
-                checked={darkMode}
-                onChange={() => setDarkMode(!darkMode)}
-              />
-              <span className="df-toggle-slider"></span>
-            </label>
-          </div>
-          <div className="df-version-text">Version 1.0.0</div>
+          <div className="df-version-text">फाइल रजिस्ट्री / File Registry</div>
         </div>
       </aside>
 
@@ -439,7 +439,7 @@ export default function FileRegistryApp() {
             <div className="df-dashboard-view">
               <div className="df-page-header">
                 <div className="df-page-title-group">
-                  <h2>DocuFlow Dashboard</h2>
+                  <h2>फाइल पंजी डैशबोर्ड / File Registry Dashboard</h2>
                   <p>Overview of physical file volumes, status classifications, and recent dispatches.</p>
                 </div>
               </div>
@@ -628,7 +628,7 @@ export default function FileRegistryApp() {
                           </div>
                         </td>
                         <td>
-                          <span className={`df-status-badge ${file.status.toLowerCase()}`}>
+                          <span className={`pill ${statusToPill(file.status)}`}>
                             {file.status}
                           </span>
                         </td>
@@ -869,7 +869,7 @@ export default function FileRegistryApp() {
                     </div>
                     <div className="df-track-detail-item">
                       <div className="df-track-label">Status</div>
-                      <span className={`df-status-badge ${trackedFile.status.toLowerCase()}`}>
+                      <span className={`pill ${statusToPill(trackedFile.status)}`}>
                         {trackedFile.status}
                       </span>
                     </div>

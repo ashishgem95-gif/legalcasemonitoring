@@ -176,16 +176,15 @@ export default function Citations() {
       {error && <div className="alert-banner error">{error}</div>}
 
       {/* Filter and Search controls */}
-      <div className="controls-panel" style={{ background: '#fff', border: '1px solid #d1d5db' }}>
+      <div className="controls-panel">
         <div className="filters-row" style={{ width: '100%' }}>
           <div className="search-input-wrapper" style={{ flex: 1 }}>
-            <svg className="search-icon-svg" width="18" height="18" fill="none" stroke="#4b5563" strokeWidth="2.5" viewBox="0 0 24 24">
+            <svg className="search-icon-svg" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
             <input
               type="text"
               className="search-input"
-              style={{ background: '#f9fafb', borderColor: '#d1d5db', color: '#111827' }}
               placeholder="Search citations by title, ruling, keywords, or applications..."
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -193,10 +192,9 @@ export default function Citations() {
           </div>
 
           <div className="filter-group">
-            <label className="filter-label" style={{ color: '#374151' }}>Category:</label>
+            <label className="filter-label">Category:</label>
             <select
               className="select-input"
-              style={{ background: '#f9fafb', borderColor: '#d1d5db', color: '#111827' }}
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
             >
@@ -212,25 +210,25 @@ export default function Citations() {
       {loading ? (
         <div className="spinner-container">
           <div className="spinner"></div>
-          <p style={{ color: '#4b5563' }}>Loading citations...</p>
+          <p>Loading citations...</p>
         </div>
       ) : filteredCitations.length === 0 ? (
-        <div className="glass-panel" style={{ background: '#fff', border: '1px solid #e5e7eb', textAlign: 'center', padding: '3rem' }}>
-          <p style={{ color: '#6b7280', fontSize: '1.1rem' }}>No legal citations found matching the criteria.</p>
+        <div className="glass-panel" style={{ textAlign: 'center', padding: '3rem' }}>
+          <p style={{ fontSize: '1.1rem' }}>No legal citations found matching the criteria.</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
           {filteredCitations.map((c) => (
-            <div key={c.id} className="glass-panel" style={{ background: '#fff', border: '1px solid #d1d5db', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', position: 'relative' }}>
+            <div key={c.id} className="glass-panel citation-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <span className={`status-tag ${c.category === '56j' ? 'disposed' : 'sinedie'}`} style={{ boxShadow: 'none' }}>
                   {c.category === '56j' ? 'Rule 56(j)' : 'UPSC Advice'}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                  <span className="citation-date">
                     {new Date(c.created_at).toLocaleDateString()}
                   </span>
-                  <button 
+                  <button
                     onClick={() => handleEditClick(c)}
                     style={{ background: 'none', border: 'none', color: '#0f2c59', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.15rem', padding: 0 }}
                     title="Edit Precedent / संपादित करें"
@@ -246,17 +244,17 @@ export default function Citations() {
                   </button>
                 </div>
               </div>
-              <h3 style={{ fontSize: '1.2rem', color: '#0f2c59', fontWeight: 700, marginBottom: '0.75rem', fontFamily: 'Outfit' }}>
+              <h3 className="citation-title">
                 {c.title}
               </h3>
               <div style={{ marginBottom: '1rem' }}>
-                <strong style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: '#374151', display: 'block', marginBottom: '0.25rem' }}>Ruling / Summary:</strong>
-                <p style={{ color: '#4b5563', fontSize: '0.925rem', lineHeight: '1.5' }}>{c.description}</p>
+                <strong className="citation-section-label">Ruling / Summary:</strong>
+                <p className="citation-text">{c.description}</p>
               </div>
               {c.where_to_cite && (
-                <div style={{ background: '#f3f4f6', borderLeft: '3px solid #003366', padding: '0.75rem 1rem', borderRadius: '0 8px 8px 0' }}>
-                  <strong style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#1e3a8a', display: 'block', marginBottom: '0.2rem' }}>Where to Cite / Application:</strong>
-                  <p style={{ color: '#374151', fontSize: '0.875rem', italic: 'true' }}>{c.where_to_cite}</p>
+                <div className="citation-application-box">
+                  <strong className="citation-application-label">Where to Cite / Application:</strong>
+                  <p className="citation-application-text">{c.where_to_cite}</p>
                 </div>
               )}
             </div>
@@ -267,9 +265,9 @@ export default function Citations() {
       {/* Add Citation Modal */}
       {showAddForm && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ background: '#fff', border: '1px solid #9ca3af', maxWidth: '580px' }}>
-            <div className="modal-header" style={{ borderBottom: '1px solid #e5e7eb' }}>
-              <h3 style={{ color: '#0f2c59', fontWeight: 700 }}>
+          <div className="modal-content" style={{ maxWidth: '580px' }}>
+            <div className="modal-header" style={{ borderBottom: '1px solid var(--border-color)' }}>
+              <h3>
                 {isEditMode ? 'संपादित करें / Edit Judicial Precedent' : 'नया संदर्भ जोड़ें / Add Judicial Precedent'}
               </h3>
               <button className="modal-close-btn" onClick={resetForm}>×</button>

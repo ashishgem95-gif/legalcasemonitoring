@@ -1,10 +1,12 @@
 node_modules/
 .env
+backend/ .env
 dist/
 .vite/
 .tmp_hc_*
 .DS_Store
 *.db-shm
 *.db-wal
+*.db.pre-*.bak
 backend/uploads/
 backups/

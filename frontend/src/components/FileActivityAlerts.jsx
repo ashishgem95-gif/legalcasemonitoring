@@ -82,9 +82,9 @@ export default function FileActivityAlerts({ user }) {
                 <tr key={`${a.action}-${a.id}`} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '0.5rem' }}>
                     {a.action === 'UPLOAD' ? (
-                      <span style={{ background: '#dcfce7', color: '#166534', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>+ ADDED</span>
+                      <span className="pill pill-success">+ ADDED</span>
                     ) : (
-                      <span style={{ background: '#fee2e2', color: '#991b1b', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>- DELETED</span>
+                      <span className="pill pill-danger">- DELETED</span>
                     )}
                   </td>
                   <td style={{ padding: '0.5rem' }}>

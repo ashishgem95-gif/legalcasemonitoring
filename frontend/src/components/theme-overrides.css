@@ -1,0 +1,1086 @@
+/* ==========================================================================
+   THEME OVERRIDES — Dark mode polish across all pages
+   Loaded globally after index.css. Applies the homepage dark mode language
+   (transparent + subtle border, dimmed accents, soft elevation) to every
+   shared class used by CaseList, CaseDetail, CaseForm, Reminders,
+   Citations, AiDraftReply, FileActivityAlerts, FileRegistryApp, Login.
+   ========================================================================== */
+
+/* ============ Status pill badges (light + dark) ============ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.pill-success { background: #dcfce7; color: #166534; }
+.pill-danger  { background: #fee2e2; color: #991b1b; }
+.pill-warning { background: #fef3c7; color: #92400e; }
+.pill-info    { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
+.pill-neutral { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+
+[data-theme="dark"] .pill-success { background: rgba(16, 185, 129, 0.18); color: #34D399; }
+[data-theme="dark"] .pill-danger  { background: rgba(239, 68, 68, 0.18);  color: #F87171; }
+[data-theme="dark"] .pill-warning { background: rgba(245, 158, 11, 0.18); color: #FBBF24; }
+[data-theme="dark"] .pill-info    { background: rgba(59, 130, 246, 0.18); color: #93C5FD; border-color: rgba(59, 130, 246, 0.4); }
+[data-theme="dark"] .pill-neutral { background: rgba(255, 255, 255, 0.06); color: var(--text-secondary); border-color: var(--border-color); }
+
+/* ============ Utility classes ============ */
+.text-muted-strong { color: var(--text-secondary); }
+.text-error        { color: #ef4444; }
+[data-theme="dark"] .text-error { color: #F87171; }
+
+/* ============ Global class overrides — dark mode ============ */
+/* Use !important on backgrounds and borders to override inline style={{ background: '#fff' }}.
+   This is the standard pattern for theming — the semantic intent is "theme overrides local style". */
+
+/* Glass / controls / case-detail cards */
+[data-theme="dark"] .glass-panel,
+[data-theme="dark"] .controls-panel,
+[data-theme="dark"] .meta-item,
+[data-theme="dark"] .horizontal-timeline-container,
+[data-theme="dark"] .kpi-card,
+[data-theme="dark"] .progression-stage-card,
+[data-theme="dark"] .ai-settings-nav,
+[data-theme="dark"] .cases-table-container,
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .modal-footer {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] .glass-panel:hover,
+[data-theme="dark"] .controls-panel:hover {
+  border-color: var(--accent-color) !important;
+}
+
+/* Cases table — already partially themed, harden it */
+[data-theme="dark"] .cases-table th {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .cases-table td {
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .cases-table tr:hover td {
+  background: var(--card-hover-bg);
+}
+
+[data-theme="dark"] .cases-table .table-row-selected td,
+[data-theme="dark"] .cases-table tr.selected td {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+/* Filter labels */
+[data-theme="dark"] .filter-label,
+[data-theme="dark"] .form-label,
+[data-theme="dark"] .kpi-label,
+[data-theme="dark"] .meta-label,
+[data-theme="dark"] .text-muted {
+  color: var(--text-secondary);
+}
+
+/* Badges / pills inside tables and controls */
+[data-theme="dark"] .badge {
+  background-color: var(--card-hover-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Case tag (used in CaseDetail) */
+[data-theme="dark"] .case-tag {
+  background: rgba(59, 130, 246, 0.12);
+  color: #93C5FD;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+[data-theme="dark"] .case-tag:hover {
+  background: rgba(59, 130, 246, 0.22);
+}
+
+/* Form controls — already partially themed */
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .search-input,
+[data-theme="dark"] .select-input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="url"],
+[data-theme="dark"] input[type="search"],
+[data-theme="dark"] select {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .form-control::placeholder,
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .search-input:focus,
+[data-theme="dark"] .select-input:focus,
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus {
+  border-color: var(--accent-color) !important;
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  outline: none;
+}
+
+/* Native select dropdowns need option styling too */
+[data-theme="dark"] select option,
+[data-theme="dark"] select optgroup {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Buttons */
+[data-theme="dark"] .btn-primary {
+  background-color: var(--accent-color) !important;
+  color: #fff !important;
+  border-color: var(--accent-color) !important;
+}
+[data-theme="dark"] .btn-primary:hover {
+  background-color: var(--accent-hover) !important;
+  border-color: var(--accent-hover) !important;
+}
+[data-theme="dark"] .btn-secondary {
+  background-color: transparent !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+[data-theme="dark"] .btn-secondary:hover {
+  background-color: var(--card-hover-bg) !important;
+  border-color: var(--accent-color) !important;
+}
+
+/* Generic <button> in dark mode (catches ad-hoc buttons without class) */
+[data-theme="dark"] button:not(.header-icon-btn):not(.logout-btn):not(.dark-toggle-btn):not(.header-dropdown-close):not(.tab-button):not(.dashboard-tab):not(.dashboard-refresh) {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+/* ============ CaseDetail metadata items & contact cards ============ */
+[data-theme="dark"] .metadata-item,
+[data-theme="dark"] .contact-card {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary);
+}
+.metadata-item,
+.contact-card {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+}
+.metadata-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+.synopsis-box {
+  background-color: var(--bg-secondary) !important;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-color) !important;
+  line-height: 1.6;
+  color: var(--text-primary) !important;
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+}
+
+.metadata-item-label,
+.contact-card-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.3rem;
+}
+.metadata-item-value,
+.contact-card-value {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+/* Court dates source link box */
+.court-dates-box {
+  background-color: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+.court-dates-box-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #10b981;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.3rem;
+}
+[data-theme="dark"] .court-dates-box-label {
+  color: #34D399;
+}
+.court-dates-box a {
+  color: #059669;
+  word-break: break-all;
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+[data-theme="dark"] .court-dates-box a {
+  color: #34D399;
+}
+
+/* Milestone item */
+.milestone-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.milestone-item:last-child { border-bottom: none; }
+.milestone-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.2rem;
+}
+.milestone-value {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.milestone-value-pending {
+  color: #f59e0b;
+}
+[data-theme="dark"] .milestone-value-pending {
+  color: #FBBF24;
+}
+
+/* Alert banners */
+[data-theme="dark"] .alert-banner {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+[data-theme="dark"] .alert-banner.error   { background: rgba(127, 29, 29, 0.25);  color: #FCA5A5; border-color: rgba(239, 68, 68, 0.4); }
+[data-theme="dark"] .alert-banner.success { background: rgba(6, 78, 59, 0.25);   color: #6EE7B7; border-color: rgba(16, 185, 129, 0.4); }
+[data-theme="dark"] .alert-banner.warning { background: rgba(120, 53, 15, 0.3);   color: #FCD34D; border-color: rgba(245, 158, 11, 0.4); }
+[data-theme="dark"] .alert-banner.info    { background: rgba(30, 58, 138, 0.3);   color: #93C5FD; border-color: rgba(59, 130, 246, 0.4); }
+
+/* Tables that are not the .cases-table variant */
+[data-theme="dark"] table:not(.cases-table) th {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  border-bottom-color: var(--border-color);
+}
+[data-theme="dark"] table:not(.cases-table) td {
+  border-color: var(--border-color);
+}
+
+/* Modals */
+[data-theme="dark"] .modal-content h1,
+[data-theme="dark"] .modal-content h2,
+[data-theme="dark"] .modal-content h3,
+[data-theme="dark"] .modal-content h4,
+[data-theme="dark"] .modal-header h1,
+[data-theme="dark"] .modal-header h2,
+[data-theme="dark"] .modal-header h3 {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .modal-content p,
+[data-theme="dark"] .modal-content label {
+  color: var(--text-secondary);
+}
+
+/* Section / page / card titles */
+[data-theme="dark"] .page-title,
+[data-theme="dark"] .card-title,
+[data-theme="dark"] .section-title,
+[data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3, [data-theme="dark"] h4 {
+  color: var(--text-primary);
+}
+
+/* Generic paragraph text in pages */
+[data-theme="dark"] p {
+  color: var(--text-secondary);
+}
+
+/* Case-link accent color (was navy) */
+[data-theme="dark"] .case-link { color: var(--accent-color) !important; }
+
+/* Empty-state messages */
+[data-theme="dark"] .empty-state,
+[data-theme="dark"] .loading-state {
+  color: var(--text-muted);
+}
+
+/* Hover states for clickable rows in non-cases tables */
+[data-theme="dark"] tr.clickable:hover td {
+  background: var(--card-hover-bg);
+}
+
+/* ============ Catch-all for inline-styled text colors in dark mode ============ */
+/* These are the most common hardcoded text colors used throughout the pages.
+   Without these, headings like "0f2c59" navy on a dark card are invisible. */
+[data-theme="dark"] [style*="color: #0f2c59"],
+[data-theme="dark"] [style*="color:#0f2c59"] {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] [style*="color: #1e3a8a"],
+[data-theme="dark"] [style*="color:#1e3a8a"] {
+  color: var(--accent-color) !important;
+}
+[data-theme="dark"] [style*="color: #374151"],
+[data-theme="dark"] [style*="color:#374151"] {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] [style*="color: #4b5563"],
+[data-theme="dark"] [style*="color:#4b5563"] {
+  color: var(--text-secondary) !important;
+}
+[data-theme="dark"] [style*="color: #6b7280"],
+[data-theme="dark"] [style*="color:#6b7280"] {
+  color: var(--text-muted) !important;
+}
+[data-theme="dark"] [style*="color: #166534"],
+[data-theme="dark"] [style*="color:#166534"] {
+  color: #34D399 !important;
+}
+[data-theme="dark"] [style*="color: #991b1b"],
+[data-theme="dark"] [style*="color:#991b1b"] {
+  color: #F87171 !important;
+}
+[data-theme="dark"] [style*="color: #92400e"],
+[data-theme="dark"] [style*="color:#92400e"] {
+  color: #FBBF24 !important;
+}
+
+/* ============ Hearing timeline order-uploaded toggle ============ */
+.hearing-timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+  border-left: 2px solid var(--border-color);
+  margin-bottom: 0.55rem;
+  background: var(--card-bg);
+  border-radius: 0 6px 6px 0;
+  position: relative;
+}
+.hearing-timeline-item:last-child { margin-bottom: 0; }
+.hearing-timeline-item:hover {
+  background: var(--card-hover-bg);
+}
+.hearing-timeline-dot {
+  position: absolute;
+  left: -5px;
+  top: 0.85rem;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--card-bg);
+  flex-shrink: 0;
+}
+.hearing-timeline-body {
+  flex: 1;
+  min-width: 0;
+}
+.hearing-timeline-date {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+.hearing-timeline-summary {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  margin-top: 0.1rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hearing-order-toggle {
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+}
+.hearing-order-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.hearing-order-toggle:active { transform: translateY(0); }
+
+.hearing-order-toggle.uploaded {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+[data-theme="dark"] .hearing-order-toggle.uploaded {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34D399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.hearing-order-toggle.pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+[data-theme="dark"] .hearing-order-toggle.pending {
+  background: rgba(245, 158, 11, 0.18);
+  color: #FBBF24;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+/* ============ DocuFlow / FileRegistry dark mode polish ============ */
+[data-theme="dark"] .docuflow-container {
+  background-color: var(--bg-primary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .docuflow-main-panel {
+  background-color: var(--bg-primary);
+}
+
+[data-theme="dark"] .df-topbar,
+[data-theme="dark"] .df-modal-header,
+[data-theme="dark"] .df-modal-footer {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .df-dashboard-card,
+[data-theme="dark"] .df-panel,
+[data-theme="dark"] .df-table-container,
+[data-theme="dark"] .df-track-search-box,
+[data-theme="dark"] .df-track-result,
+[data-theme="dark"] .df-filter-bar,
+[data-theme="dark"] .df-modal-content {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .df-location-item {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .df-location-item:hover {
+  border-color: var(--accent-color);
+}
+
+[data-theme="dark"] .df-location-count {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .df-table thead th {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .df-table tbody td {
+  color: var(--text-primary);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .df-table tbody tr:hover td {
+  background-color: var(--card-hover-bg);
+}
+
+[data-theme="dark"] .df-search-input-wrapper,
+[data-theme="dark"] .df-search-bar-container {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .df-search-bar-container:focus-within,
+[data-theme="dark"] .df-search-input-wrapper:focus-within {
+  border-color: var(--accent-color);
+}
+
+[data-theme="dark"] .df-search-input,
+[data-theme="dark"] .df-topbar-search-input {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .df-form-input,
+[data-theme="dark"] .df-form-textarea,
+[data-theme="dark"] .df-form-select,
+[data-theme="dark"] .df-select,
+[data-theme="dark"] .df-track-input {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .df-form-input::placeholder,
+[data-theme="dark"] .df-form-textarea::placeholder,
+[data-theme="dark"] .df-track-input::placeholder {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .df-date-badge,
+[data-theme="dark"] .df-user-badge {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .df-file-no-tag {
+  background-color: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.3);
+  color: #93C5FD;
+}
+
+[data-theme="dark"] .df-subject-title,
+[data-theme="dark"] .df-custodian-cell,
+[data-theme="dark"] .df-location-cell,
+[data-theme="dark"] .df-page-title-group h2,
+[data-theme="dark"] .df-panel-header,
+[data-theme="dark"] .df-card-value,
+[data-theme="dark"] .df-track-search-box h3,
+[data-theme="dark"] .df-track-result-title {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .df-subject-desc,
+[data-theme="dark"] .df-page-title-group p,
+[data-theme="dark"] .df-card-label,
+[data-theme="dark"] .df-track-result-sub,
+[data-theme="dark"] .df-location-name,
+[data-theme="dark"] .df-location-count,
+[data-theme="dark"] .df-location-icon,
+[data-theme="dark"] .df-custodian-icon,
+[data-theme="dark"] .df-search-icon,
+[data-theme="dark"] .df-search-bar-icon,
+[data-theme="dark"] .timeline-date,
+[data-theme="dark"] .timeline-meta {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .df-action-btn {
+  background-color: transparent;
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .df-action-btn.edit {
+  color: #93C5FD;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+[data-theme="dark"] .df-action-btn.edit:hover {
+  background-color: rgba(59, 130, 246, 0.15);
+  border-color: #3b82f6;
+}
+
+[data-theme="dark"] .df-action-btn.dispatch {
+  color: #7DD3FC;
+  border-color: rgba(14, 165, 233, 0.3);
+}
+[data-theme="dark"] .df-action-btn.dispatch:hover {
+  background-color: rgba(14, 165, 233, 0.15);
+  border-color: #0ea5e9;
+}
+
+[data-theme="dark"] .df-action-btn.history {
+  color: #C4B5FD;
+  border-color: rgba(139, 92, 246, 0.3);
+}
+[data-theme="dark"] .df-action-btn.history:hover {
+  background-color: rgba(139, 92, 246, 0.15);
+  border-color: #8b5cf6;
+}
+
+[data-theme="dark"] .df-action-btn.delete {
+  color: #FCA5A5;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+[data-theme="dark"] .df-action-btn.delete:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+}
+
+[data-theme="dark"] .df-btn-secondary {
+  background-color: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+[data-theme="dark"] .df-btn-secondary:hover {
+  background-color: var(--card-hover-bg);
+  border-color: var(--accent-color);
+}
+
+[data-theme="dark"] .timeline::before {
+  background-color: var(--border-color);
+}
+
+[data-theme="dark"] .timeline-item::before {
+  background-color: var(--bg-primary);
+  border-color: var(--accent-color);
+}
+
+[data-theme="dark"] .df-modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* Keep the FileRegistryApp's sky-blue brand colors as accents (DF logo, file-no tag, etc.) — these stay consistent in both modes */
+[data-theme="dark"] .df-page-header {
+  border-bottom-color: var(--border-color);
+}
+
+/* ============ Citations page ============ */
+.citation-card {
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+[data-theme="dark"] .citation-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.citation-title {
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+  font-family: 'Outfit', sans-serif;
+}
+.citation-section-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 700;
+}
+.citation-text {
+  color: var(--text-secondary);
+  font-size: 0.925rem;
+  line-height: 1.5;
+  margin: 0;
+}
+.citation-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.citation-application-box {
+  background-color: var(--bg-secondary);
+  border-left: 3px solid var(--accent-color);
+  padding: 0.75rem 1rem;
+  border-radius: 0 8px 8px 0;
+}
+.citation-application-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--accent-color);
+  display: block;
+  margin-bottom: 0.2rem;
+  font-weight: 700;
+}
+.citation-application-text {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-style: italic;
+  margin: 0;
+}
+
+/* ============ AI Draft step cards ============ */
+.ai-draft-section {
+  background-color: var(--card-bg) !important;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+.ai-draft-section-title {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin: 0 0 0.85rem 0;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+}
+.ai-draft-banner {
+  background: linear-gradient(135deg, #0f2c59 0%, #1e3a8a 100%);
+  padding: 1.75rem 2rem;
+  border-radius: 12px;
+  color: #fff;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 20px rgba(15, 44, 89, 0.15);
+}
+.ai-draft-banner-title {
+  font-size: 1.5rem;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  margin: 0;
+  color: #fff;
+}
+.ai-draft-banner-sub {
+  color: #93c5fd;
+  font-size: 0.9rem;
+  margin: 0.4rem 0 0 0;
+}
+.ai-draft-info-box {
+  background-color: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: #38bdf8;
+}
+.ai-draft-error-box {
+  background-color: rgba(127, 29, 29, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  color: #FCA5A5;
+}
+
+/* ============ Login page classes (light + dark) ============ */
+.login-page {
+  min-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  background-image:
+    radial-gradient(at 50% 0%, rgba(245, 158, 11, 0.05) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 1000px;
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 15px 35px rgba(15, 44, 89, 0.08);
+  overflow: hidden;
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+[data-theme="dark"] .login-card {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+}
+
+.login-tricolor {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  height: 6px;
+  width: 100%;
+}
+.login-tricolor-saffron { background: #ff9933; }
+.login-tricolor-white   { background: #ffffff; }
+.login-tricolor-green   { background: #128807; }
+
+.login-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  min-height: 520px;
+}
+
+.login-hero {
+  background: linear-gradient(135deg, #0f2c59 0%, #1e3a8a 100%);
+  padding: 3rem;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+}
+
+.login-emblem-box {
+  background: rgba(255, 255, 255, 0.08);
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.login-eyebrow {
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  color: #ff9933;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.login-h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.2;
+  margin: 0 0 1rem;
+}
+
+.login-sub-text {
+  font-size: 1rem;
+  color: #93c5fd;
+  line-height: 1.6;
+  max-width: 420px;
+  margin: 0 0 2rem;
+}
+
+.login-status-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.login-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10b981;
+  animation: pulse-glow 2s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+.login-status-text {
+  font-size: 0.8rem;
+  color: #93c5fd;
+  font-weight: 500;
+}
+
+.login-panel {
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--card-bg);
+}
+
+.login-h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem;
+  font-family: 'Outfit', sans-serif;
+}
+
+.login-help {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0 0 1.75rem;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.login-submit {
+  background: var(--accent-color);
+  border: 1px solid var(--accent-color);
+  color: #ffffff;
+  padding: 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.login-submit:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.login-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ============ Login responsive ============ */
+@media (max-width: 768px) {
+  .login-grid { grid-template-columns: 1fr; }
+  .login-hero { padding: 2rem 1.5rem; }
+  .login-panel { padding: 2rem 1.5rem; }
+  .login-h1 { font-size: 1.5rem; }
+}
+
+/* ============ Kanban / Calendar / Analytics (in Dashboard.css) — dark mode additions ============ */
+[data-theme="dark"] .kanban-column {
+  background: var(--card-bg);
+  border-color: var(--border-color);
+}
+[data-theme="dark"] .kanban-column-header {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+[data-theme="dark"] .kanban-card {
+  background: var(--card-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+[data-theme="dark"] .kanban-card:hover {
+  background: var(--card-hover-bg);
+  border-color: var(--accent-color);
+}
+
+[data-theme="dark"] .calendar-grid,
+[data-theme="dark"] .calendar-day-cell {
+  border-color: var(--border-color);
+}
+[data-theme="dark"] .calendar-day-cell {
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+[data-theme="dark"] .calendar-day-cell:hover {
+  background: var(--card-hover-bg);
+}
+[data-theme="dark"] .calendar-day-cell.is-other-month {
+  background: transparent;
+  color: var(--text-muted);
+}
+[data-theme="dark"] .calendar-day-cell.is-today {
+  border-color: var(--accent-color);
+}
+
+[data-theme="dark"] .status-donut-wrap,
+[data-theme="dark"] .status-legend,
+[data-theme="dark"] .insight-strip,
+[data-theme="dark"] .attention-list-wrap,
+[data-theme="dark"] .chart-panel {
+  background: var(--card-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+[data-theme="dark"] .status-donut-total,
+[data-theme="dark"] .status-donut-label,
+[data-theme="dark"] .chart-panel-title {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .status-legend li {
+  color: var(--text-secondary);
+}
+
+/* ============ File Registry (in FileRegistry.css) — dark mode additions ============ */
+[data-theme="dark"] .file-registry-card,
+[data-theme="dark"] .file-movement-row,
+[data-theme="dark"] .zonal-railway-card,
+[data-theme="dark"] .dispatch-log-row {
+  background: var(--card-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+[data-theme="dark"] .file-registry-card:hover,
+[data-theme="dark"] .zonal-railway-card:hover {
+  background: var(--card-hover-bg);
+  border-color: var(--accent-color);
+}
+
+/* ============ Tabs (used across pages) ============ */
+[data-theme="dark"] .tab-button,
+[data-theme="dark"] .tabs-nav button {
+  background: transparent;
+  color: var(--text-secondary);
+  border-bottom-color: transparent;
+}
+[data-theme="dark"] .tab-button.active,
+[data-theme="dark"] .tabs-nav button.active,
+[data-theme="dark"] .dashboard-tab.active {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+}
+[data-theme="dark"] .tab-button:hover,
+[data-theme="dark"] .tabs-nav button:hover {
+  color: var(--accent-color);
+}
+
+/* ============ File Activity Alerts overlay — dark mode ============ */
+.file-activity-overlay {
+  background: var(--card-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+.file-activity-overlay table th {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  border-bottom-color: var(--border-color);
+}
+.file-activity-overlay table td {
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+.file-activity-overlay p {
+  color: var(--text-secondary);
+}

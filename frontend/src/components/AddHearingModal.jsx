@@ -5,6 +5,7 @@ import AiSettingsPanel from './AiSettingsPanel';
 export default function AddHearingModal({ caseId, onClose, onHearingAdded }) {
   const [hearingDate, setHearingDate] = useState(new Date().toISOString().split('T')[0]);
   const [orderRawText, setOrderRawText] = useState('');
+  const [orderUploaded, setOrderUploaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [extracting, setExtracting] = useState(false);
@@ -20,6 +21,7 @@ export default function AddHearingModal({ caseId, onClose, onHearingAdded }) {
       const response = await api.extractPdfText(file);
       if (response && response.text) {
         setOrderRawText(response.text);
+        setOrderUploaded(true);
       } else {
         throw new Error('No text returned from the PDF.');
       }
@@ -44,7 +46,8 @@ export default function AddHearingModal({ caseId, onClose, onHearingAdded }) {
 
       const newHearing = await api.addHearingToCase(caseId, {
         hearing_date: hearingDate,
-        order_raw_text: orderRawText
+        order_raw_text: orderRawText,
+        order_uploaded: orderUploaded
       });
 
       onHearingAdded(newHearing);

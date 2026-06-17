@@ -231,15 +231,14 @@ export default function CaseList() {
       {error && <div className="alert-banner error">{error}</div>}
 
       {/* Search & Filters */}
-      <div className="controls-panel" style={{ background: '#fff', border: '1px solid #d1d5db' }}>
+      <div className="controls-panel">
         <div className="search-input-wrapper">
-          <svg className="search-icon-svg" width="18" height="18" fill="none" stroke="#4b5563" strokeWidth="2.5" viewBox="0 0 24 24">
+          <svg className="search-icon-svg" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
           <input
             type="text"
             className="search-input"
-            style={{ background: '#f9fafb', borderColor: '#d1d5db', color: '#111827' }}
             placeholder="Search by case ref, name, designation, issue details, file number..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
@@ -248,8 +247,8 @@ export default function CaseList() {
 
         <div className="filters-row">
           <div className="filter-group">
-            <label className="filter-label" style={{ color: '#374151' }}>Status:</label>
-            <select className="select-input" style={{ background: '#f9fafb', borderColor: '#d1d5db', color: '#111827' }} value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
+            <label className="filter-label">Status:</label>
+            <select className="select-input" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
               <option value="All">All Statuses</option>
               <option value="Active">Active</option>
               <option value="Pending">Pending</option>
@@ -260,8 +259,8 @@ export default function CaseList() {
           </div>
 
           <div className="filter-group">
-            <label className="filter-label" style={{ color: '#374151' }}>Forum (CAT/HC):</label>
-            <select className="select-input" style={{ background: '#f9fafb', borderColor: '#d1d5db', color: '#111827' }} value={selectedForum} onChange={(e) => setSelectedForum(e.target.value)}>
+            <label className="filter-label">Forum (CAT/HC):</label>
+            <select className="select-input" value={selectedForum} onChange={(e) => setSelectedForum(e.target.value)}>
               {uniqueForums.map(f => (
                 <option key={f} value={f}>{f === 'All' ? 'All Forums' : f}</option>
               ))}
@@ -269,8 +268,8 @@ export default function CaseList() {
           </div>
 
           <div className="filter-group">
-            <label className="filter-label" style={{ color: '#374151' }}>Year:</label>
-            <select className="select-input" style={{ background: '#f9fafb', borderColor: '#d1d5db', color: '#111827' }} value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
+            <label className="filter-label">Year:</label>
+            <select className="select-input" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
               {uniqueYears.map(y => (
                 <option key={y} value={y}>{y === 'All' ? 'All Years' : y}</option>
               ))}
@@ -278,8 +277,8 @@ export default function CaseList() {
           </div>
 
           <div className="filter-group">
-            <label className="filter-label" style={{ color: '#374151' }}>Railway:</label>
-            <select className="select-input" style={{ background: '#f9fafb', borderColor: '#d1d5db', color: '#111827' }} value={selectedRailway} onChange={(e) => setSelectedRailway(e.target.value)}>
+            <label className="filter-label">Railway:</label>
+            <select className="select-input" value={selectedRailway} onChange={(e) => setSelectedRailway(e.target.value)}>
               {uniqueRailways.map(r => (
                 <option key={r} value={r}>{r === 'All' ? 'All Railways' : r}</option>
               ))}
@@ -287,9 +286,9 @@ export default function CaseList() {
           </div>
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <span className="badge" style={{ background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db' }}>{totalFiltered} matches</span>
-            <button 
-              className="btn btn-secondary" 
+            <span className="badge">{totalFiltered} matches</span>
+            <button
+              className="btn btn-secondary"
               style={{ padding: '0.4rem 0.8rem' }}
               onClick={() => {
                 setSearchText('');
@@ -307,19 +306,20 @@ export default function CaseList() {
 
       {/* Search Results Counter */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <span style={{ fontSize: '0.85rem', color: '#374151', fontWeight: 600 }}>
+        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
           {(searchText.trim() || selectedStatus !== 'All' || selectedForum !== 'All' || selectedYear !== 'All' || selectedRailway !== 'All') ? (
-            <>Showing <span style={{ color: '#0f2c59' }}>{filteredCases.length}</span> of {cases.length} cases
-            {searchText.trim() && <span style={{ color: '#6b7280' }}> matching "{searchText.trim()}"</span>}
+            <>Showing <span style={{ color: 'var(--accent-color)' }}>{filteredCases.length}</span> of {cases.length} cases
+            {searchText.trim() && <span style={{ color: 'var(--text-muted)' }}> matching "{searchText.trim()}"</span>}
             </>
           ) : (
-            <>Showing all <span style={{ color: '#0f2c59' }}>{cases.length}</span> cases</>
+            <>Showing all <span style={{ color: 'var(--accent-color)' }}>{cases.length}</span> cases</>
           )}
         </span>
         {(searchText.trim() || selectedStatus !== 'All' || selectedForum !== 'All' || selectedYear !== 'All' || selectedRailway !== 'All') && (
           <button
             onClick={() => { setSearchText(''); setSelectedStatus('All'); setSelectedForum('All'); setSelectedYear('All'); setSelectedRailway('All'); setCurrentPage(1); }}
-            style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', background: '#fff', border: '1px solid #d1d5db', color: '#374151', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+            className="btn btn-secondary"
+            style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
           >
             Clear All
           </button>
@@ -327,21 +327,21 @@ export default function CaseList() {
       </div>
 
       {/* Spreadsheet grid */}
-      <div className="glass-panel" style={{ background: '#fff', border: '1px solid #d1d5db', padding: '1rem' }}>
+      <div className="glass-panel" style={{ padding: '1rem' }}>
         {loading ? (
           <div className="spinner-container">
             <div className="spinner"></div>
-            <p style={{ color: '#4b5563' }}>Loading cases spreadsheet...</p>
+            <p>Loading cases spreadsheet...</p>
           </div>
         ) : currentItems.length === 0 ? (
           <div className="empty-state">
-            <h3 style={{ color: '#0f2c59' }}>No cases found matching filters</h3>
-            <p style={{ color: '#6b7280' }}>Modify search keywords or clear filters to retrieve records.</p>
+            <h3>No cases found matching filters</h3>
+            <p>Modify search keywords or clear filters to retrieve records.</p>
           </div>
         ) : (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', fontSize: '0.85rem' }}>
-              <span style={{ color: '#4b5563', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 <svg width="16" height="16" fill="none" stroke="#2563eb" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
@@ -355,10 +355,10 @@ export default function CaseList() {
                 Reset Column Order
               </button>
             </div>
-            <div className="cases-table-container" style={{ border: '1px solid #d1d5db' }}>
+            <div className="cases-table-container">
               <table className="cases-table">
                 <thead>
-                  <tr style={{ background: '#f3f4f6' }}>
+                  <tr>
                     {columns.map(col => (
                       <th
                         key={col.id}
@@ -369,7 +369,7 @@ export default function CaseList() {
                         onDrop={(e) => handleDrop(e, col.id)}
                         className={`draggable-th ${draggedColumnId === col.id ? 'dragging' : ''} ${dragOverColumnId === col.id ? 'drag-over' : ''}`}
                         style={{
-                          color: '#4b5563', cursor: 'pointer',
+                          cursor: 'pointer',
                           padding: col.id === 'sno' ? '0.75rem 0.5rem' : '0.75rem 1rem',
                           minWidth: col.minWidth || 'auto',
                           textAlign: col.id === 'sno' ? 'center' : 'left'

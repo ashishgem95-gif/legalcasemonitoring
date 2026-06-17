@@ -111,6 +111,11 @@ export const api = {
   // Hearings
   getHearingsForCase: (caseId) => request(`/cases/${caseId}/hearings`),
   addHearingToCase: (caseId, hearingData) => request(`/cases/${caseId}/hearings`, { method: 'POST', body: hearingData }),
+  setHearingOrderUploaded: (caseId, hearingId, uploaded) =>
+    request(`/cases/${caseId}/hearings/${hearingId}/order-uploaded`, {
+      method: 'PATCH',
+      body: { order_uploaded: uploaded },
+    }),
 
   // Citations
   getCitations: (params = {}) => {

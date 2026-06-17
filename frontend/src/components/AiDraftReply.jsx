@@ -172,21 +172,17 @@ export default function AiDraftReply() {
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <div className="goi-banner" style={{
-        background: 'linear-gradient(135deg, #0f2c59 0%, #1e3a8a 100%)',
-        padding: '1.75rem 2rem', borderRadius: '12px', color: '#fff', marginBottom: '1.5rem',
-        boxShadow: '0 4px 20px rgba(15, 44, 89, 0.15)',
-      }}>
-        <h1 style={{ fontSize: '1.5rem', fontFamily: 'Outfit', fontWeight: 800, margin: 0 }}>
+      <div className="ai-draft-banner">
+        <h1 className="ai-draft-banner-title">
           ✨ AI Affidavit / Reply Drafter
         </h1>
-        <p style={{ color: '#93c5fd', fontSize: '0.9rem', margin: '0.4rem 0 0 0' }}>
+        <p className="ai-draft-banner-sub">
           Upload a new affidavit, pick 3-5 precedent cases, and generate a draft reply in formal legal language.
         </p>
       </div>
 
       {error && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem' }}>
+        <div className="ai-draft-error-box">
           ❌ {error}
         </div>
       )}
@@ -200,20 +196,21 @@ export default function AiDraftReply() {
             style={{ fontSize: '0.875rem' }}
           />
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>or paste text:</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>or paste text:</span>
             <button
               type="button"
               onClick={() => {
                 const text = prompt('Paste the affidavit text:');
                 if (text) handleTextPaste(text);
               }}
-              style={{ padding: '0.3rem 0.7rem', fontSize: '0.8rem', background: '#fff', border: '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer' }}
+              className="btn btn-secondary"
+              style={{ padding: '0.3rem 0.7rem', fontSize: '0.8rem' }}
             >
               Paste Text
             </button>
           </div>
           {filename && (
-            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', padding: '0.5rem 0.75rem', fontSize: '0.85rem', color: '#0369a1' }}>
+            <div className="ai-draft-info-box">
               📄 <strong>{filename}</strong> ({uploadedText.length.toLocaleString()} chars loaded)
             </div>
           )}
@@ -234,7 +231,7 @@ export default function AiDraftReply() {
             <option value="Misc">Miscellaneous</option>
           </select>
           {caseTypeOverridden && (
-            <span style={{ fontSize: '0.75rem', color: '#92400e', background: '#fef3c7', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+            <span className="pill pill-warning">
               ✋ Manually set
             </span>
           )}
@@ -266,11 +263,12 @@ export default function AiDraftReply() {
           <div style={{ marginBottom: '0.75rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
             <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>Selected:</span>
             {precedents.map(p => (
-              <span key={p.id} style={{ background: '#dbeafe', border: '1px solid #93c5fd', color: '#1e3a8a', padding: '0.25rem 0.6rem', borderRadius: '14px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+              <span key={p.id} className="pill pill-info" style={{ borderRadius: '14px', padding: '0.25rem 0.6rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                 {p.case_ref_no}
                 <button
                   onClick={() => togglePrecedent(p)}
-                  style={{ background: 'none', border: 'none', color: '#1e3a8a', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', padding: 0, lineHeight: 1 }}
+                  className="pill-info-remove"
+                  style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', padding: 0, lineHeight: 1 }}
                   title="Remove"
                 >×</button>
               </span>
@@ -417,11 +415,8 @@ export default function AiDraftReply() {
 
 function Section({ title, children }) {
   return (
-    <div style={{
-      background: '#fff', border: '1px solid #d1d5db', borderRadius: '12px',
-      padding: '1.25rem 1.5rem', marginBottom: '1.25rem',
-    }}>
-      <h3 style={{ fontSize: '1rem', color: '#0f2c59', margin: '0 0 0.85rem 0', fontWeight: 700, fontFamily: 'Outfit' }}>
+    <div className="ai-draft-section">
+      <h3 className="ai-draft-section-title">
         {title}
       </h3>
       {children}

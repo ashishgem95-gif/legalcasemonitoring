@@ -47,9 +47,10 @@ router.post('/alerts/trigger-crawl', triggerManualCrawl);
 router.post('/alerts/check-due-cases', checkDueCases);
 
 // ── Hearings ──
-const { getHearingsForCase, addHearingToCase } = require('../controllers/hearingController');
+const { getHearingsForCase, addHearingToCase, setHearingOrderUploaded } = require('../controllers/hearingController');
 router.get('/cases/:id/hearings', getHearingsForCase);
 router.post('/cases/:id/hearings', validate(hearingSchema), addHearingToCase);
+router.patch('/cases/:caseId/hearings/:hearingId/order-uploaded', setHearingOrderUploaded);
 
 // ── Citations ──
 const { getCitations, createCitation, updateCitation, deleteCitation, parseCitationPdf } = require('../controllers/citationController');
