@@ -10,6 +10,7 @@ import FileRegistryApp from './components/FileRegistryApp';
 import Login from './components/Login';
 import AiDraftReply from './components/AiDraftReply';
 import FileActivityAlerts from './components/FileActivityAlerts';
+import ErrorBoundary from './components/ErrorBoundary';
 import api from './utils/api';
 import { ThemeProvider, useTheme } from './utils/ThemeContext';
 
@@ -239,6 +240,7 @@ export default function App() {
           <FileActivityAlerts user={user} />
           <Header user={user} onLogout={handleLogout} />
           <main className="main-content">
+            <ErrorBoundary>
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/analysis" element={<Analysis />} />
@@ -255,6 +257,7 @@ export default function App() {
                 <button onClick={() => window.history.back()} className="notfound-btn">Go Back</button>
               </div>} />
             </Routes>
+            </ErrorBoundary>
           </main>
 
           <footer className="goi-footer">

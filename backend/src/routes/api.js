@@ -81,7 +81,7 @@ router.delete('/citations/:id', requireRole('Super Admin / Central Legal Cell', 
 const { getAffidavitsForCase, addAffidavitToCase, deleteAffidavit } = require('../controllers/affidavitController');
 router.get('/cases/:id/affidavits', enforceScope, getAffidavitsForCase);
 router.post('/cases/:id/affidavits', enforceScope, addAffidavitToCase);
-router.delete('/affidavits/:id', deleteAffidavit);
+router.delete('/affidavits/:id', enforceScope, deleteAffidavit);
 
 // ── Personnel ──
 const { getPersonnel, createPersonnel, updatePersonnel, deletePersonnel } = require('../controllers/personnelController');
@@ -93,15 +93,15 @@ router.delete('/personnel/:id', requireRole('Super Admin / Central Legal Cell', 
 // ── Physical Files ──
 const { getFiles, getFileById, createFile, updateFile, deleteFile } = require('../controllers/fileRegistryController');
 router.get('/physical-files', enforceScope, getFiles);
-router.get('/physical-files/:id', getFileById);
-router.post('/physical-files', validate(physicalFileSchema), createFile);
-router.put('/physical-files/:id', validate(physicalFileSchema), updateFile);
-router.delete('/physical-files/:id', deleteFile);
+router.get('/physical-files/:id', enforceScope, getFileById);
+router.post('/physical-files', enforceScope, validate(physicalFileSchema), createFile);
+router.put('/physical-files/:id', enforceScope, validate(physicalFileSchema), updateFile);
+router.delete('/physical-files/:id', enforceScope, deleteFile);
 
 // ── File Movements ──
 const { getMovements, createMovement } = require('../controllers/movementController');
 router.get('/file-movements', enforceScope, getMovements);
-router.post('/file-movements', createMovement);
+router.post('/file-movements', enforceScope, createMovement);
 
 // ── Reporting ──
 const { getCaseSummary, getHearingCalendar, getZoneDistribution, exportCases } = require('../controllers/reportController');

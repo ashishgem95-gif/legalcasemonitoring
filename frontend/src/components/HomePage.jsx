@@ -86,7 +86,6 @@ export default function HomePage() {
         value: s.pendingReplies,
         labelHi: 'लंबित उत्तर',
         labelEn: 'Pending Replies',
-        to: '/reminders',
         tone: (s.pendingReplies || 0) > 0 ? 'amber' : 'green',
       },
       {
@@ -190,8 +189,9 @@ export default function HomePage() {
             key={card.key}
             type="button"
             className={`homepage-stat homepage-stat-${card.tone} ${loading ? 'is-loading' : ''}`}
-            onClick={() => navigate(card.to)}
-            title={`Go to ${card.labelEn}`}
+            onClick={card.to ? () => navigate(card.to) : undefined}
+            title={card.to ? `Go to ${card.labelEn}` : card.labelEn}
+            style={card.to ? undefined : { cursor: 'default' }}
           >
             <span className="homepage-stat-icon" aria-hidden="true">{card.icon}</span>
             <span className="homepage-stat-body">

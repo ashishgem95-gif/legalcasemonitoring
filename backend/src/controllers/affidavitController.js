@@ -63,9 +63,15 @@ const addAffidavitToCase = async (req, res) => {
 // DELETE /api/affidavits/:id
 const deleteAffidavit = async (req, res) => {
   try {
-    const existing = get('SELECT id FROM case_affidavits WHERE id = ?', [req.params.id]);
+    const existing = get('SELECT id, case_id FROM case_affidavits WHERE id = ?', [req.params.id]);
     if (!existing) {
       return res.status(404).json({ error: 'Affidavit record not found.' });
+    }
+    if (req._railwayScope) {
+      const caseRow = get('SELECT railway FROM cases WHERE id = ?', [existing.case_id]);
+      if (!caseRow || caseRow.railway !== req._railwayScope) {
+        return res.status(403).json({ error: 'Access denied to this affidavit.' });
+      }
     }
     run('DELETE FROM case_affidavits WHERE id = ?', [req.params.id]);
     res.json({ message: 'Affidavit record successfully deleted.' });

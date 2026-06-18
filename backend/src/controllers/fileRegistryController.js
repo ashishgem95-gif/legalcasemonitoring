@@ -1,4 +1,5 @@
 const { run, get, all } = require('../config/dbHelper');
+const { db } = require('../config/database');
 
 // GET /api/physical-files
 exports.getFiles = (req, res) => {
@@ -56,6 +57,10 @@ exports.getFileById = (req, res) => {
       return res.status(404).json({ error: 'Physical file not found' });
     }
 
+    if (req._railwayScope && (file.zonal_railway || '') !== req._railwayScope) {
+      return res.status(403).json({ error: 'Access denied to this physical file.' });
+    }
+
     file.movements = all(`
       SELECT fm.*,
              c1.name AS from_custodian_name, c1.designation AS from_custodian_designation,
@@ -83,18 +88,26 @@ exports.createFile = (req, res) => {
     }
 
     const fileStatus = status || 'ACTIVE';
-    const result = run(
-      'INSERT INTO physical_files (file_number, subject, description, currently_with_id, zonal_railway, status) VALUES (?, ?, ?, ?, ?, ?)',
-      [file_number, subject, description || '', currently_with_id || null, zonal_railway || '', fileStatus]
-    );
 
-    if (currently_with_id) {
-      const today = new Date().toISOString().split('T')[0];
-      run(
-        'INSERT INTO file_movements (file_id, from_custodian_id, to_custodian_id, movement_date, purpose, remarks) VALUES (?, NULL, ?, ?, ?, ?)',
-        [result.id, currently_with_id, today, 'Initial Registry Entry', 'File entered into system register.']
-      );
+    if (req._railwayScope && (zonal_railway || '') !== req._railwayScope) {
+      return res.status(403).json({ error: 'Cannot create physical files for other railway zones.' });
     }
+
+    const result = db.transaction(() => {
+      const r = run(
+        'INSERT INTO physical_files (file_number, subject, description, currently_with_id, zonal_railway, status) VALUES (?, ?, ?, ?, ?, ?)',
+        [file_number, subject, description || '', currently_with_id || null, zonal_railway || '', fileStatus]
+      );
+
+      if (currently_with_id) {
+        const today = new Date().toISOString().split('T')[0];
+        run(
+          'INSERT INTO file_movements (file_id, from_custodian_id, to_custodian_id, movement_date, purpose, remarks) VALUES (?, NULL, ?, ?, ?, ?)',
+          [r.id, currently_with_id, today, 'Initial Registry Entry', 'File entered into system register.']
+        );
+      }
+      return r;
+    })();
 
     res.status(201).json({ id: result.id, file_number, subject, description, currently_with_id, zonal_railway, status: fileStatus });
   } catch (err) {
@@ -115,28 +128,36 @@ exports.updateFile = (req, res) => {
       return res.status(400).json({ error: 'File Number and Subject are required fields' });
     }
 
-    const original = get('SELECT currently_with_id FROM physical_files WHERE id = ?', [id]);
+    const original = get('SELECT currently_with_id, zonal_railway FROM physical_files WHERE id = ?', [id]);
     if (!original) {
       return res.status(404).json({ error: 'Physical file not found' });
+    }
+
+    if (req._railwayScope) {
+      if ((original.zonal_railway || '') !== req._railwayScope || (zonal_railway || '') !== req._railwayScope) {
+        return res.status(403).json({ error: 'Cannot modify physical files for other railway zones.' });
+      }
     }
 
     const originalCustodian = original.currently_with_id;
     const newCustodian = currently_with_id || null;
 
-    run(
-      `UPDATE physical_files
-       SET file_number = ?, subject = ?, description = ?, currently_with_id = ?, zonal_railway = ?, status = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      [file_number, subject, description || '', newCustodian, zonal_railway || '', status || 'ACTIVE', id]
-    );
-
-    if (originalCustodian !== newCustodian && newCustodian !== null) {
-      const today = new Date().toISOString().split('T')[0];
+    db.transaction(() => {
       run(
-        'INSERT INTO file_movements (file_id, from_custodian_id, to_custodian_id, movement_date, purpose, remarks) VALUES (?, ?, ?, ?, ?, ?)',
-        [id, originalCustodian, newCustodian, today, 'Custodian changed via File Edit', 'Updated in the file registry details form.']
+        `UPDATE physical_files
+         SET file_number = ?, subject = ?, description = ?, currently_with_id = ?, zonal_railway = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [file_number, subject, description || '', newCustodian, zonal_railway || '', status || 'ACTIVE', id]
       );
-    }
+
+      if (originalCustodian !== newCustodian && newCustodian !== null) {
+        const today = new Date().toISOString().split('T')[0];
+        run(
+          'INSERT INTO file_movements (file_id, from_custodian_id, to_custodian_id, movement_date, purpose, remarks) VALUES (?, ?, ?, ?, ?, ?)',
+          [id, originalCustodian, newCustodian, today, 'Custodian changed via File Edit', 'Updated in the file registry details form.']
+        );
+      }
+    })();
 
     res.json({ id: parseInt(id), file_number, subject, description, currently_with_id: newCustodian, zonal_railway, status });
   } catch (err) {
@@ -151,6 +172,13 @@ exports.updateFile = (req, res) => {
 // DELETE /api/physical-files/:id
 exports.deleteFile = (req, res) => {
   try {
+    const file = get('SELECT zonal_railway FROM physical_files WHERE id = ?', [req.params.id]);
+    if (!file) {
+      return res.status(404).json({ error: 'Physical file not found' });
+    }
+    if (req._railwayScope && (file.zonal_railway || '') !== req._railwayScope) {
+      return res.status(403).json({ error: 'Access denied to this physical file.' });
+    }
     run('DELETE FROM physical_files WHERE id = ?', [req.params.id]);
     res.json({ message: 'Physical file deleted successfully' });
   } catch (err) {

@@ -1,4 +1,5 @@
 const { run, get, all } = require('../config/dbHelper');
+const { db } = require('../config/database');
 
 // GET /api/file-movements
 exports.getMovements = (req, res) => {
@@ -40,9 +41,13 @@ exports.createMovement = (req, res) => {
       return res.status(400).json({ error: 'File, Recipient Custodian, and Dispatch Date are required.' });
     }
 
-    const file = get('SELECT currently_with_id, status FROM physical_files WHERE id = ?', [file_id]);
+    const file = get('SELECT currently_with_id, status, zonal_railway FROM physical_files WHERE id = ?', [file_id]);
     if (!file) {
       return res.status(404).json({ error: 'Physical file not found' });
+    }
+
+    if (req._railwayScope && (file.zonal_railway || '') !== req._railwayScope) {
+      return res.status(403).json({ error: 'Access denied to this physical file.' });
     }
 
     const fromCustodianId = file.currently_with_id;
@@ -50,15 +55,18 @@ exports.createMovement = (req, res) => {
       return res.status(400).json({ error: 'The file is already in the custody of this person.' });
     }
 
-    const result = run(
-      'INSERT INTO file_movements (file_id, from_custodian_id, to_custodian_id, movement_date, purpose, remarks) VALUES (?, ?, ?, ?, ?, ?)',
-      [file_id, fromCustodianId, to_custodian_id, movement_date, purpose || '', remarks || '']
-    );
+    const result = db.transaction(() => {
+      const r = run(
+        'INSERT INTO file_movements (file_id, from_custodian_id, to_custodian_id, movement_date, purpose, remarks) VALUES (?, ?, ?, ?, ?, ?)',
+        [file_id, fromCustodianId, to_custodian_id, movement_date, purpose || '', remarks || '']
+      );
 
-    run(
-      'UPDATE physical_files SET currently_with_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [to_custodian_id, file_id]
-    );
+      run(
+        'UPDATE physical_files SET currently_with_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [to_custodian_id, file_id]
+      );
+      return r;
+    })();
 
     res.status(201).json({
       id: result.id, file_id, from_custodian_id: fromCustodianId, to_custodian_id, movement_date, purpose, remarks
