@@ -55,13 +55,16 @@ router.delete('/cases/:id', deleteCase);
 router.patch('/cases/:id/status', enforceScopeBody, updateCaseStatus);
 router.patch('/cases/:id/next-hearing', enforceScopeBody, updateCaseNextHearing);
 
-// ── Alerts ──
-const { getAlerts, markAlertAsRead, markAllAlertsAsRead, triggerManualCrawl, checkDueCases } = require('../controllers/alertController');
+// ── Alerts & Notifications ──
+const { getAlerts, markAlertAsRead, markAllAlertsAsRead, triggerManualCrawl, checkDueCases, getNotifications, markNotificationRead, markAllNotificationsRead } = require('../controllers/alertController');
 router.get('/alerts', enforceScope, getAlerts);
 router.put('/alerts/:id/read', markAlertAsRead);
 router.put('/alerts/read-all', markAllAlertsAsRead);
 router.post('/alerts/trigger-crawl', requireRole('Super Admin / Central Legal Cell', 'admin'), triggerManualCrawl);
 router.post('/alerts/check-due-cases', requireRole('Super Admin / Central Legal Cell', 'admin'), checkDueCases);
+router.get('/notifications', enforceScope, getNotifications);
+router.put('/notifications/alert/:id/read', markNotificationRead);
+router.put('/notifications/read-all', markAllNotificationsRead);
 
 // ── Hearings ──
 const { getHearingsForCase, addHearingToCase, setHearingOrderUploaded } = require('../controllers/hearingController');

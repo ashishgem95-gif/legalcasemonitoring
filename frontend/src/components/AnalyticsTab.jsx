@@ -11,29 +11,41 @@ import {
   ResponsiveContainer, AreaChart, Area,
 } from 'recharts';
 
-const STATUS_COLORS = {
-  Disposed: '#059669',
+const STATUS_COLORS_LIGHT = {
+  Disposed: '#10b981',
   Pending: '#0f2c59',
-  'Pending Reply': '#f59e0b',
-  'Reply Filed': '#3b82f6',
+  'Pending Reply': '#d97706',
+  'Reply Filed': '#0f2c59',
   Closed: '#6b7280',
-  Withdrawn: '#9ca3af',
+  Withdrawn: '#6b7280',
 };
 
-function colorForStatus(status, idx) {
-  return STATUS_COLORS[status] || ['#0f2c59', '#1e3a8a', '#3b82f6', '#60a5fa', '#93c5fd', '#f59e0b', '#ef4444'][idx % 7];
-}
+const STATUS_COLORS_DARK = {
+  Disposed: '#34D399',
+  Pending: '#3B82F6',
+  'Pending Reply': '#FBBF24',
+  'Reply Filed': '#3B82F6',
+  Closed: '#64748B',
+  Withdrawn: '#64748B',
+};
+
+const FALLBACK_LIGHT = ['#0f2c59', '#1e40af', '#0f2c59', '#1e40af', '#1e40af', '#d97706', '#ef4444'];
+const FALLBACK_DARK = ['#3B82F6', '#60A5FA', '#3B82F6', '#60A5FA', '#60A5FA', '#FBBF24', '#F87171'];
 
 export default function AnalyticsTab({ refreshKey }) {
   const { isDark } = useTheme();
+  const statusColors = isDark ? STATUS_COLORS_DARK : STATUS_COLORS_LIGHT;
+  const fallback = isDark ? FALLBACK_DARK : FALLBACK_LIGHT;
+  const colorForStatus = (status, idx) => statusColors[status] || fallback[idx % fallback.length];
   const axisColor = isDark ? '#94A3B8' : '#4b5563';
   const gridColor = isDark ? '#334155' : '#e5e7eb';
-  const cursorFill = isDark ? '#273449' : '#f3f4f6';
+  const cursorFill = isDark ? '#273449' : '#f9fafb';
   const primaryBar = isDark ? '#3B82F6' : '#0f2c59';
-  const secondaryBar = isDark ? '#60A5FA' : '#1e3a8a';
+  const secondaryBar = isDark ? '#60A5FA' : '#1e40af';
   const orangeBar = isDark ? '#FBBF24' : '#ff9933';
-  const blueBar = isDark ? '#60A5FA' : '#3b82f6';
-  const greenStroke = isDark ? '#34D399' : '#059669';
+  const blueBar = isDark ? '#60A5FA' : '#0f2c59';
+  const greenStroke = isDark ? '#34D399' : '#10b981';
+  const areaGradient = isDark ? '#34D399' : '#059669';
 
   const [charts, setCharts] = useState(null);
   const [dashboard, setDashboard] = useState(null);
@@ -153,7 +165,7 @@ export default function AnalyticsTab({ refreshKey }) {
 
   if (error && !charts) {
     return (
-      <div className="glass-panel" style={{ background: '#fff', border: '1px solid #fecaca', textAlign: 'center', padding: '3rem', color: '#991b1b' }}>
+      <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--red)', textAlign: 'center', padding: '3rem', color: 'var(--red)' }}>
         <p style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>{error}</p>
         <button className="btn btn-primary" onClick={() => fetchAll(true)}>Retry</button>
       </div>
@@ -333,8 +345,8 @@ export default function AnalyticsTab({ refreshKey }) {
               <AreaChart data={disposalData}>
                 <defs>
                   <linearGradient id="disposalFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#059669" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#059669" stopOpacity={0.02} />
+                    <stop offset="0%" stopColor={areaGradient} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={areaGradient} stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />

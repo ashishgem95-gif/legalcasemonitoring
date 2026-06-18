@@ -10,7 +10,7 @@ function Stat({ label, value, sub }) {
   );
 }
 
-function BarRow({ label, value, total, color = '#0f2c59' }) {
+function BarRow({ label, value, total, color = 'var(--accent-color)' }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
     <div className="insight-bar-row">
@@ -80,7 +80,7 @@ export default function InsightsStrip({ insights }) {
                 label={f.forum}
                 value={f.pending}
                 total={maxForumPending}
-                color="#0f2c59"
+                color="var(--accent-color)"
               />
             ))
           )}
@@ -97,7 +97,7 @@ export default function InsightsStrip({ insights }) {
                 label={a.name}
                 value={a.total}
                 total={maxAdvocateTotal}
-                color="#1e3a8a"
+                color="var(--accent-hover)"
               />
             ))
           )}
@@ -114,7 +114,7 @@ export default function InsightsStrip({ insights }) {
                 label={n.name}
                 value={n.pending}
                 total={maxNodalPending}
-                color="#ff9933"
+                color="var(--saffron)"
               />
             ))
           )}

@@ -1,6 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
+import StatusChip from './StatusChip';
+import CopyLinkButton from './CopyLinkButton';
+import CasePreview from './CasePreview';
+import { useHoverPreview } from '../utils/useHoverPreview';
+
+function CaseNameCell({ caseItem, navigate }) {
+  const { visible, position, pinned, triggerProps, previewProps } = useHoverPreview();
+  return (
+    <td key="name">
+      <span
+        className="case-ref-link"
+        style={{ color: 'var(--accent-hover)', cursor: 'pointer', fontWeight: 700 }}
+        onMouseEnter={triggerProps.onMouseEnter}
+        onMouseLeave={triggerProps.onMouseLeave}
+        onClick={() => navigate(`/cases/${caseItem.id}`)}
+      >
+        {caseItem.applicant || 'Petitioner'}
+      </span>
+      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', margin: '0.15rem 0' }}>Vs.</span>
+      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'block' }}>{caseItem.respondent || 'UOI & Ors.'}</span>
+      <CopyLinkButton caseId={caseItem.id} size="xs" />
+      <CasePreview caseItem={caseItem} visible={visible} position={position} pinned={pinned} previewProps={previewProps} />
+    </td>
+  );
+}
 
 const DEFAULT_COLUMNS = [
   { id: 'sno', label: 'S.No.' },
@@ -441,19 +466,7 @@ export default function CaseList() {
                                 <td key="railway" style={{ fontWeight: 600, color: '#374151' }}>{c.railway || '-'}</td>
                               );
                             case 'name':
-                              return (
-                                <td key="name">
-                                  <span 
-                                    className="case-ref-link" 
-                                    style={{ color: '#1e3a8a', cursor: 'pointer', fontWeight: 700 }}
-                                    onClick={() => navigate(`/cases/${c.id}`)}
-                                  >
-                                    {c.applicant || 'Petitioner'}
-                                  </span>
-                                  <span style={{ fontSize: '0.8rem', color: '#6b7280', display: 'block', margin: '0.15rem 0' }}>Vs.</span>
-                                  <span style={{ fontSize: '0.85rem', color: '#4b5563', display: 'block' }}>{c.respondent || 'UOI & Ors.'}</span>
-                                </td>
-                              );
+                              return <CaseNameCell key="name" caseItem={c} navigate={navigate} />;
                             case 'designation':
                               return (
                                 <td key="designation" style={{ fontSize: '0.85rem', color: '#4b5563' }}>{c.employee_designation || '-'}</td>
@@ -543,9 +556,7 @@ export default function CaseList() {
                             case 'status':
                               return (
                                 <td key="status">
-                                  <span className={`status-tag ${getStatusClass(c.present_status)}`} style={{ boxShadow: 'none' }}>
-                                    {c.present_status || 'Pending'}
-                                  </span>
+                                  <StatusChip status={c.present_status} style={{ boxShadow: 'none' }} />
                                 </td>
                               );
                             case 'linkFileNo':

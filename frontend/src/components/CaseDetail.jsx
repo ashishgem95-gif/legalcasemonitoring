@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 import AddHearingModal from './AddHearingModal';
+import StatusChip from './StatusChip';
+import CopyLinkButton from './CopyLinkButton';
 
 const PROGRESSION_STAGES = [
   { id: 'charge_sheet_issued', label: 'Charge Sheet Issued', color: '#8b5cf6', shortLabel: 'Charge' },
@@ -10,8 +12,8 @@ const PROGRESSION_STAGES = [
   { id: 'io_report_submitted', label: 'IO Report Submitted', color: '#10b981', shortLabel: 'IO Report' },
   { id: 'da_notice', label: 'DA Notice (2nd Show Cause)', color: '#f59e0b', shortLabel: 'DA Notice' },
   { id: 'reply_to_da_notice', label: 'Reply to DA Notice', color: '#f59e0b', shortLabel: 'Reply DA' },
-  { id: 'da_penalty_order', label: 'DA Penalty Order', color: '#ef4444', shortLabel: 'Penalty' },
-  { id: 'upsc_advice', label: 'UPSC Advice', color: '#ef4444', shortLabel: 'UPSC' },
+  { id: 'da_penalty_order', label: 'DA Penalty Order', color: 'var(--red)', shortLabel: 'Penalty' },
+  { id: 'upsc_advice', label: 'UPSC Advice', color: 'var(--red)', shortLabel: 'UPSC' },
   { id: 'appeal_oa_filed', label: 'Appeal / OA Filed', color: '#3b82f6', shortLabel: 'Appeal/OA' },
   { id: 'counter_affidavit_filed', label: 'Counter Affidavit Filed', color: '#3b82f6', shortLabel: 'Counter' },
   { id: 'cat_court_order', label: 'CAT / Court Order', color: '#6366f1', shortLabel: 'Order' },
@@ -314,16 +316,16 @@ export default function CaseDetail() {
     return (
       <div className="spinner-container">
         <div className="spinner"></div>
-        <p style={{ color: '#4b5563' }}>Loading case profile...</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Loading case profile...</p>
       </div>
     );
   }
 
   if (error || !caseObj) {
     return (
-      <div className="glass-panel" style={{ textAlign: 'center', padding: '3rem', background: '#fff', border: '1px solid #d1d5db' }}>
-        <h2 style={{ color: '#ef4444', marginBottom: '1rem', fontFamily: 'Outfit' }}>Error Loading Case</h2>
-        <p style={{ color: '#4b5563', marginBottom: '1.5rem' }}>{error || 'Case not found in the database.'}</p>
+      <div className="glass-panel" style={{ textAlign: 'center', padding: '3rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+        <h2 style={{ color: 'var(--red)', marginBottom: '1rem', fontFamily: 'Outfit' }}>Error Loading Case</h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>{error || 'Case not found in the database.'}</p>
         <Link to="/cases" className="btn btn-secondary">Back to Spreadsheet Grid</Link>
       </div>
     );
@@ -345,58 +347,57 @@ export default function CaseDetail() {
       {/* Detail Header & Action Buttons */}
       <div className="detail-header" style={{ marginBottom: '2rem' }}>
         <div className="detail-title-area">
-          <Link to="/cases" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', marginBottom: '0.5rem', color: '#1e3a8a', fontWeight: 600 }}>
+          <Link to="/cases" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--accent-hover)', fontWeight: 600 }}>
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
             </svg>
             मामला सूची पर वापस जाएं / Back to Spreadsheet Grid
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#0f2c59', margin: 0 }}>
+            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--accent-color)', margin: 0 }}>
               {caseObj.case_ref_no}{caseObj.applicant && ` - ${caseObj.applicant}`}
             </h1>
-            <span className={`status-tag ${getStatusClass(caseObj.present_status)}`} style={{ boxShadow: 'none' }}>
-              {caseObj.present_status || 'Pending'}
-            </span>
+            <StatusChip status={caseObj.present_status} style={{ boxShadow: 'none' }} />
+            <CopyLinkButton caseId={caseObj.id} />
           </div>
-          <p style={{ color: '#4b5563', marginTop: '0.25rem' }}>
-            {caseObj.case_type || 'General'} Case • Forum: <strong style={{ color: '#111827' }}>{caseObj.forum || 'N/A'}</strong>
+          <p style={{ color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+            {caseObj.case_type || 'General'} Case • Forum: <strong style={{ color: 'var(--text-primary)' }}>{caseObj.forum || 'N/A'}</strong>
           </p>
           {caseObj.present_status === 'Disposed' && caseObj.disposal_date ? (
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-              background: '#ECFDF5', border: '1px solid #A7F3D0',
+              background: 'var(--status-disposed-bg)', border: '1px solid var(--status-disposed)',
               borderRadius: '6px', padding: '0.4rem 0.75rem', marginTop: '0.5rem'
             }}>
               <svg width="14" height="14" fill="none" stroke="#059669" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#065F46' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--status-disposed)' }}>
                 Disposed on {new Date(caseObj.disposal_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
               </span>
             </div>
           ) : caseObj.next_hearing_date && (
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-              background: caseObj.next_hearing_date < new Date().toISOString().split('T')[0] ? '#FEF2F2' : '#FFF7ED',
-              border: `1px solid ${caseObj.next_hearing_date < new Date().toISOString().split('T')[0] ? '#FECACA' : '#FED7AA'}`,
+              background: caseObj.next_hearing_date < new Date().toISOString().split('T')[0] ? 'var(--red-bg)' : 'var(--saffron-bg)',
+              border: `1px solid ${caseObj.next_hearing_date < new Date().toISOString().split('T')[0] ? 'var(--red)' : 'var(--saffron-border)'}`,
               borderRadius: '6px', padding: '0.4rem 0.75rem', marginTop: '0.5rem'
             }}>
-              <svg width="14" height="14" fill="none" stroke={caseObj.next_hearing_date < new Date().toISOString().split('T')[0] ? '#DC2626' : '#D97706'} strokeWidth="2.5" viewBox="0 0 24 24">
+              <svg width="14" height="14" fill="none" stroke={caseObj.next_hearing_date < new Date().toISOString().split('T')[0] ? 'var(--red)' : 'var(--status-pending)'} strokeWidth="2.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1A1A1A' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                 Next Hearing: {new Date(caseObj.next_hearing_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
               </span>
               {caseObj.next_hearing_date < new Date().toISOString().split('T')[0] && (
-                <span style={{ background: '#DC2626', color: '#fff', fontSize: '0.6rem', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 700 }}>OVERDUE</span>
+                <span style={{ background: 'var(--red)', color: '#fff', fontSize: '0.6rem', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 700 }}>OVERDUE</span>
               )}
             </div>
           )}
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn btn-secondary" style={{ borderColor: '#d1d5db', color: '#374151' }} onClick={() => navigate(`/cases/${caseObj.id}/edit`)}>
+          <button className="btn btn-secondary" style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }} onClick={() => navigate(`/cases/${caseObj.id}/edit`)}>
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
             </svg>
@@ -413,7 +414,7 @@ export default function CaseDetail() {
               onClick={handleResync}
               disabled={resyncing}
               style={{
-                background: resyncing ? '#9ca3af' : 'linear-gradient(135deg, #0f2c59 0%, #1e3a8a 100%)',
+                background: resyncing ? 'var(--text-muted)' : 'linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '6px',
@@ -439,9 +440,9 @@ export default function CaseDetail() {
         </div>
         {resyncMessage && (
           <div style={{
-            background: resyncMessage.startsWith('❌') ? '#fef2f2' : resyncMessage.startsWith('✅') ? '#ecfdf5' : '#eff6ff',
-            border: `1px solid ${resyncMessage.startsWith('❌') ? '#fecaca' : resyncMessage.startsWith('✅') ? '#a7f3d0' : '#bfdbfe'}`,
-            color: resyncMessage.startsWith('❌') ? '#991b1b' : resyncMessage.startsWith('✅') ? '#065f46' : '#1e40af',
+            background: resyncMessage.startsWith('❌') ? 'var(--red-bg)' : resyncMessage.startsWith('✅') ? 'var(--status-disposed-bg)' : 'var(--bg-secondary)',
+            border: `1px solid ${resyncMessage.startsWith('❌') ? 'var(--red)' : resyncMessage.startsWith('✅') ? 'var(--status-disposed)' : 'var(--accent-hover)'}`,
+            color: resyncMessage.startsWith('❌') ? 'var(--red)' : resyncMessage.startsWith('✅') ? 'var(--status-disposed)' : 'var(--accent-hover)',
             borderRadius: '8px',
             padding: '0.75rem 1rem',
             marginTop: '1rem',
@@ -457,44 +458,44 @@ export default function CaseDetail() {
         {/* Left Side: Metadata and Timeline */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           {/* Metadata Grid */}
-          <div className="glass-panel" style={{ background: '#fff', border: '1px solid #d1d5db', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '2px solid #0f2c59', paddingBottom: '0.5rem', color: '#0f2c59' }}>
+          <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '2px solid var(--accent-color)', paddingBottom: '0.5rem', color: 'var(--accent-color)' }}>
               मामला विवरण / Case Metadata
             </h2>
             <div className="metadata-grid">
-              <div className="metadata-item" style={{ background: '#f9fafb', borderColor: '#e5e7eb' }}>
-                <span className="metadata-label" style={{ color: '#4b5563' }}>Railway Zone/Division</span>
-                <span className="metadata-value" style={{ color: '#111827' }}>{caseObj.railway || 'N/A'}</span>
+              <div className="metadata-item" style={{ background: 'var(--card-hover-bg)', borderColor: 'var(--border-light)' }}>
+                <span className="metadata-label" style={{ color: 'var(--text-secondary)' }}>Railway Zone/Division</span>
+                <span className="metadata-value" style={{ color: 'var(--text-primary)' }}>{caseObj.railway || 'N/A'}</span>
               </div>
-              <div className="metadata-item" style={{ background: '#f9fafb', borderColor: '#e5e7eb' }}>
-                <span className="metadata-label" style={{ color: '#4b5563' }}>Employee Designation</span>
-                <span className="metadata-value" style={{ color: '#111827' }}>{caseObj.employee_designation || 'N/A'}</span>
+              <div className="metadata-item" style={{ background: 'var(--card-hover-bg)', borderColor: 'var(--border-light)' }}>
+                <span className="metadata-label" style={{ color: 'var(--text-secondary)' }}>Employee Designation</span>
+                <span className="metadata-value" style={{ color: 'var(--text-primary)' }}>{caseObj.employee_designation || 'N/A'}</span>
               </div>
-              <div className="metadata-item" style={{ background: '#f9fafb', borderColor: '#e5e7eb' }}>
-                <span className="metadata-label" style={{ color: '#4b5563' }}>Case Year</span>
-                <span className="metadata-value" style={{ color: '#111827' }}>{caseObj.case_year || 'N/A'}</span>
+              <div className="metadata-item" style={{ background: 'var(--card-hover-bg)', borderColor: 'var(--border-light)' }}>
+                <span className="metadata-label" style={{ color: 'var(--text-secondary)' }}>Case Year</span>
+                <span className="metadata-value" style={{ color: 'var(--text-primary)' }}>{caseObj.case_year || 'N/A'}</span>
               </div>
-              <div className="metadata-item" style={{ background: '#f9fafb', borderColor: '#e5e7eb' }}>
-                <span className="metadata-label" style={{ color: '#4b5563' }}>Case Number</span>
-                <span className="metadata-value" style={{ color: '#111827' }}>{caseObj.case_number || 'N/A'}</span>
+              <div className="metadata-item" style={{ background: 'var(--card-hover-bg)', borderColor: 'var(--border-light)' }}>
+                <span className="metadata-label" style={{ color: 'var(--text-secondary)' }}>Case Number</span>
+                <span className="metadata-value" style={{ color: 'var(--text-primary)' }}>{caseObj.case_number || 'N/A'}</span>
               </div>
-              <div className="metadata-item" style={{ background: '#f9fafb', borderColor: '#e5e7eb' }}>
-                <span className="metadata-label" style={{ color: '#4b5563' }}>File Number</span>
-                <span className="metadata-value" style={{ color: '#111827' }}>{caseObj.file_no || 'N/A'}</span>
+              <div className="metadata-item" style={{ background: 'var(--card-hover-bg)', borderColor: 'var(--border-light)' }}>
+                <span className="metadata-label" style={{ color: 'var(--text-secondary)' }}>File Number</span>
+                <span className="metadata-value" style={{ color: 'var(--text-primary)' }}>{caseObj.file_no || 'N/A'}</span>
               </div>
-              <div className="metadata-item" style={{ background: '#f9fafb', borderColor: '#e5e7eb' }}>
-                <span className="metadata-label" style={{ color: '#4b5563' }}>Linked File Number</span>
-                <span className="metadata-value" style={{ color: '#111827' }}>{caseObj.link_file_no || 'N/A'}</span>
+              <div className="metadata-item" style={{ background: 'var(--card-hover-bg)', borderColor: 'var(--border-light)' }}>
+                <span className="metadata-label" style={{ color: 'var(--text-secondary)' }}>Linked File Number</span>
+                <span className="metadata-value" style={{ color: 'var(--text-primary)' }}>{caseObj.link_file_no || 'N/A'}</span>
               </div>
-              <div className="metadata-item" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', gridColumn: 'span 2' }}>
-                <span className="metadata-label" style={{ color: '#15803d', fontWeight: 600 }}>Court Dates Source Link</span>
+              <div className="metadata-item" style={{ background: 'var(--status-disposed-bg)', borderColor: 'var(--status-disposed)', gridColumn: 'span 2' }}>
+                <span className="metadata-label" style={{ color: 'var(--status-disposed)', fontWeight: 600 }}>Court Dates Source Link</span>
                 <span className="metadata-value">
                   {caseObj.court_link ? (
                     <a 
                       href={caseObj.court_link} 
                       target="_blank" 
                       rel="noopener noreferrer" 
-                      style={{ color: '#166534', fontWeight: 700, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', wordBreak: 'break-all' }}
+                      style={{ color: 'var(--status-disposed)', fontWeight: 700, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', wordBreak: 'break-all' }}
                     >
                       {caseObj.court_link}
                       <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -502,7 +503,7 @@ export default function CaseDetail() {
                       </svg>
                     </a>
                   ) : (
-                    <span style={{ color: '#9ca3af' }}>Not Provided</span>
+                    <span style={{ color: 'var(--text-muted)' }}>Not Provided</span>
                   )}
                 </span>
               </div>
@@ -519,14 +520,14 @@ export default function CaseDetail() {
 
           {/* Original Tribunal Progression Details */}
           {(caseObj.original_oa_no || isHcorSc) && (
-            <div className="glass-panel" style={{ background: '#fff', border: '1px solid #d1d5db', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '2px solid #ff9933', paddingBottom: '0.5rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f2c59', margin: 0 }}>
+            <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '2px solid var(--saffron)', paddingBottom: '0.5rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-color)', margin: 0 }}>
                   मूल अधिकरण संदर्भ विवरण / Original Tribunal Progression (OA Details)
                 </h2>
                 <button 
                   className="btn btn-secondary" 
-                  style={{ background: '#ff9933', color: '#fff', borderColor: 'transparent', padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }} 
+                  style={{ background: 'var(--saffron)', color: '#fff', borderColor: 'transparent', padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }} 
                   onClick={handleOpenEditTribunal}
                 >
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -536,44 +537,44 @@ export default function CaseDetail() {
                 </button>
               </div>
               <div className="metadata-grid">
-                <div className="metadata-item" style={{ background: '#fffaf5', borderColor: '#ffe9db' }}>
-                  <span className="metadata-label" style={{ color: '#b45309' }}>Original Case No. (OA)</span>
-                  <span className="metadata-value" style={{ color: '#78350f', fontWeight: 700 }}>{caseObj.original_oa_no || 'Not Recorded'}</span>
+                <div className="metadata-item" style={{ background: 'var(--saffron-bg)', borderColor: 'var(--saffron-border)' }}>
+                  <span className="metadata-label" style={{ color: 'var(--saffron-deep)' }}>Original Case No. (OA)</span>
+                  <span className="metadata-value" style={{ color: 'var(--saffron-dark)', fontWeight: 700 }}>{caseObj.original_oa_no || 'Not Recorded'}</span>
                 </div>
-                <div className="metadata-item" style={{ background: '#fffaf5', borderColor: '#ffe9db' }}>
-                  <span className="metadata-label" style={{ color: '#b45309' }}>Original Forum / Tribunal</span>
-                  <span className="metadata-value" style={{ color: '#78350f' }}>{caseObj.original_oa_forum || 'Not Recorded'}</span>
+                <div className="metadata-item" style={{ background: 'var(--saffron-bg)', borderColor: 'var(--saffron-border)' }}>
+                  <span className="metadata-label" style={{ color: 'var(--saffron-deep)' }}>Original Forum / Tribunal</span>
+                  <span className="metadata-value" style={{ color: 'var(--saffron-dark)' }}>{caseObj.original_oa_forum || 'Not Recorded'}</span>
                 </div>
-                <div className="metadata-item" style={{ background: '#fffaf5', borderColor: '#ffe9db' }}>
-                  <span className="metadata-label" style={{ color: '#b45309' }}>Date of Disposal by Tribunal</span>
-                  <span className="metadata-value" style={{ color: '#78350f' }}>
+                <div className="metadata-item" style={{ background: 'var(--saffron-bg)', borderColor: 'var(--saffron-border)' }}>
+                  <span className="metadata-label" style={{ color: 'var(--saffron-deep)' }}>Date of Disposal by Tribunal</span>
+                  <span className="metadata-value" style={{ color: 'var(--saffron-dark)' }}>
                     {caseObj.original_oa_date_disposal ? new Date(caseObj.original_oa_date_disposal).toLocaleDateString() : 'N/A'}
                   </span>
                 </div>
-                <div className="metadata-item" style={{ background: '#fffaf5', borderColor: '#ffe9db' }}>
-                  <span className="metadata-label" style={{ color: '#b45309' }}>Tribunal Outcome / Status</span>
-                  <span className="metadata-value" style={{ color: '#78350f', fontWeight: 600 }}>{caseObj.original_oa_status || 'N/A'}</span>
+                <div className="metadata-item" style={{ background: 'var(--saffron-bg)', borderColor: 'var(--saffron-border)' }}>
+                  <span className="metadata-label" style={{ color: 'var(--saffron-deep)' }}>Tribunal Outcome / Status</span>
+                  <span className="metadata-value" style={{ color: 'var(--saffron-dark)', fontWeight: 600 }}>{caseObj.original_oa_status || 'N/A'}</span>
                 </div>
               </div>
             </div>
           )}
 
           {/* Court Orders & Documents Section */}
-          <div className="glass-panel" style={{ background: '#fff', border: '1px solid #d1d5db', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '2px solid #0f2c59', paddingBottom: '0.5rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f2c59', margin: 0 }}>
+          <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '2px solid var(--accent-color)', paddingBottom: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-color)', margin: 0 }}>
                 न्यायालय आदेश एवं दस्तावेज / Court Orders & Documents
               </h2>
               {caseObj.court_link && (
-                <a href={caseObj.court_link} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem', background: '#ff9933', borderColor: '#ff9933', color: '#fff', textDecoration: 'none', borderRadius: '6px', fontWeight: 700 }}>
+                <a href={caseObj.court_link} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem', background: 'var(--saffron)', borderColor: 'var(--saffron)', color: '#fff', textDecoration: 'none', borderRadius: '6px', fontWeight: 700 }}>
                   View on Court Website ↗
                 </a>
               )}
             </div>
 
             {documents.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280', background: '#f9fafb', borderRadius: '8px', border: '1px dashed #d1d5db' }}>
-                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" style={{ marginBottom: '0.5rem', color: '#9ca3af' }}>
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', background: 'var(--card-hover-bg)', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
+                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" style={{ marginBottom: '0.5rem', color: 'var(--text-muted)' }}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
                 <p style={{ margin: 0, fontSize: '0.85rem' }}>
@@ -585,22 +586,22 @@ export default function CaseDetail() {
                 {documents.map((doc, idx) => (
                   <div key={doc.id} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px',
+                    background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px',
                     padding: '0.65rem 1rem', transition: 'all 0.15s ease'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <div style={{
-                        background: '#ff9933', color: '#fff', width: '32px', height: '32px',
+                        background: 'var(--saffron)', color: '#fff', width: '32px', height: '32px',
                         borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '0.8rem', fontWeight: 700, flexShrink: 0
                       }}>
                         {idx + 1}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1e293b' }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--bg-secondary)' }}>
                           {doc.original_name}
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
                           {doc.mime_type} {doc.file_size ? `· ${(doc.file_size / 1024).toFixed(1)} KB` : ''} · {new Date(doc.created_at).toLocaleDateString()}
                         </div>
                       </div>
@@ -608,7 +609,7 @@ export default function CaseDetail() {
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <a href={doc.storage_path} target="_blank" rel="noopener noreferrer"
                         style={{
-                          background: '#D97706', color: '#fff', border: 'none', borderRadius: '6px',
+                          background: 'var(--status-pending)', color: '#fff', border: 'none', borderRadius: '6px',
                           padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600,
                           cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
                         }}>
@@ -626,70 +627,70 @@ export default function CaseDetail() {
 
           {/* Stage-wise Affidavits Section */}
           {isHcorSc && (
-            <div className="glass-panel" style={{ background: '#fff', border: '1px solid #d1d5db', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '2px solid #0f2c59', paddingBottom: '0.5rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f2c59', margin: 0 }}>
+            <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '2px solid var(--accent-color)', paddingBottom: '0.5rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-color)', margin: 0 }}>
                   शपथ पत्र बुरादा लॉग / Stage-wise Affidavits Log
                 </h2>
-                <button className="btn btn-secondary" style={{ background: '#0f2c59', color: '#fff', borderColor: 'transparent', padding: '0.35rem 0.75rem', fontSize: '0.85rem' }} onClick={() => setIsAddAffidavitOpen(true)}>
+                <button className="btn btn-secondary" style={{ background: 'var(--accent-color)', color: '#fff', borderColor: 'transparent', padding: '0.35rem 0.75rem', fontSize: '0.85rem' }} onClick={() => setIsAddAffidavitOpen(true)}>
                   + Record Affidavit
                 </button>
               </div>
 
               {affidavits.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280', fontSize: '0.9rem' }}>
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                   No affidavits recorded yet. Click "Record Affidavit" to log petitioner or respondent filings.
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                   {/* Petitioner Filings (Left Column) */}
-                  <div style={{ borderRight: '1px solid #e5e7eb', paddingRight: '0.75rem' }}>
-                    <h4 style={{ color: '#1e3a8a', borderBottom: '1px solid #bfdbfe', paddingBottom: '0.25rem', marginBottom: '0.75rem', fontSize: '0.95rem', fontWeight: 700 }}>
+                  <div style={{ borderRight: '1px solid var(--border-light)', paddingRight: '0.75rem' }}>
+                    <h4 style={{ color: 'var(--accent-hover)', borderBottom: '1px solid var(--accent-hover)', paddingBottom: '0.25rem', marginBottom: '0.75rem', fontSize: '0.95rem', fontWeight: 700 }}>
                       याचिकाकर्ता शपथ पत्र / Petitioner Filings
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {affidavits.filter(a => a.filed_by === 'Petitioner').map(a => (
-                        <div key={a.id} style={{ background: '#f3f4f6', borderLeft: '3px solid #1e3a8a', padding: '0.5rem 0.75rem', borderRadius: '0 4px 4px 0', position: 'relative' }}>
+                        <div key={a.id} style={{ background: 'var(--card-hover-bg)', borderLeft: '3px solid var(--accent-hover)', padding: '0.5rem 0.75rem', borderRadius: '0 4px 4px 0', position: 'relative' }}>
                           <button 
                             onClick={() => handleDeleteAffidavit(a.id)}
-                            style={{ position: 'absolute', right: '0.35rem', top: '0.35rem', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', padding: 0 }}
+                            style={{ position: 'absolute', right: '0.35rem', top: '0.35rem', background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', padding: 0 }}
                             title="Delete Record"
                           >
                             &times;
                           </button>
-                          <div style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>{new Date(a.filing_date).toLocaleDateString()}</div>
-                          <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#111827', marginTop: '0.15rem' }}>{a.affidavit_type}</div>
-                          {a.notes && <div style={{ fontSize: '0.75rem', color: '#4b5563', marginTop: '0.25rem', fontStyle: 'italic' }}>{a.notes}</div>}
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>{new Date(a.filing_date).toLocaleDateString()}</div>
+                          <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)', marginTop: '0.15rem' }}>{a.affidavit_type}</div>
+                          {a.notes && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', fontStyle: 'italic' }}>{a.notes}</div>}
                         </div>
                       ))}
                       {affidavits.filter(a => a.filed_by === 'Petitioner').length === 0 && (
-                        <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>No petitioner affidavits recorded.</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No petitioner affidavits recorded.</span>
                       )}
                     </div>
                   </div>
 
                   {/* Respondent Filings (Right Column) */}
                   <div>
-                    <h4 style={{ color: '#128807', borderBottom: '1px solid #a7f3d0', paddingBottom: '0.25rem', marginBottom: '0.75rem', fontSize: '0.95rem', fontWeight: 700 }}>
+                    <h4 style={{ color: 'var(--status-disposed)', borderBottom: '1px solid var(--status-disposed)', paddingBottom: '0.25rem', marginBottom: '0.75rem', fontSize: '0.95rem', fontWeight: 700 }}>
                       उत्तरदाता (रेलवे) शपथ पत्र / Respondent (UOI) Filings
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {affidavits.filter(a => a.filed_by === 'Respondent').map(a => (
-                        <div key={a.id} style={{ background: '#f0fdf4', borderLeft: '3px solid #128807', padding: '0.5rem 0.75rem', borderRadius: '0 4px 4px 0', position: 'relative' }}>
+                        <div key={a.id} style={{ background: 'var(--status-disposed-bg)', borderLeft: '3px solid var(--status-disposed)', padding: '0.5rem 0.75rem', borderRadius: '0 4px 4px 0', position: 'relative' }}>
                           <button 
                             onClick={() => handleDeleteAffidavit(a.id)}
-                            style={{ position: 'absolute', right: '0.35rem', top: '0.35rem', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', padding: 0 }}
+                            style={{ position: 'absolute', right: '0.35rem', top: '0.35rem', background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', padding: 0 }}
                             title="Delete Record"
                           >
                             &times;
                           </button>
-                          <div style={{ fontSize: '0.8rem', color: '#047857', fontWeight: 600 }}>{new Date(a.filing_date).toLocaleDateString()}</div>
-                          <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#111827', marginTop: '0.15rem' }}>{a.affidavit_type}</div>
-                          {a.notes && <div style={{ fontSize: '0.75rem', color: '#4b5563', marginTop: '0.25rem', fontStyle: 'italic' }}>{a.notes}</div>}
+                          <div style={{ fontSize: '0.8rem', color: 'var(--status-disposed)', fontWeight: 600 }}>{new Date(a.filing_date).toLocaleDateString()}</div>
+                          <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)', marginTop: '0.15rem' }}>{a.affidavit_type}</div>
+                          {a.notes && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', fontStyle: 'italic' }}>{a.notes}</div>}
                         </div>
                       ))}
                       {affidavits.filter(a => a.filed_by === 'Respondent').length === 0 && (
-                        <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>No respondent affidavits recorded.</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No respondent affidavits recorded.</span>
                       )}
                     </div>
                   </div>
@@ -702,7 +703,7 @@ export default function CaseDetail() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', margin: '1.5rem 0' }}>
             <div className="card" style={{ padding: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <strong style={{ fontSize: '0.9rem', color: '#0f2c59' }}>Activity Timeline</strong>
+                <strong style={{ fontSize: '0.9rem', color: 'var(--accent-color)' }}>Activity Timeline</strong>
                 <button className="btn btn-primary" style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }} onClick={() => setIsAddHearingOpen(true)}>
                   + Record Hearing
                 </button>
@@ -725,11 +726,11 @@ export default function CaseDetail() {
                     </button>
                   </div>
                 ))}
-                {(!hearings || hearings.length === 0) && <span style={{ color: '#9ca3af' }}>No hearing records yet</span>}
+                {(!hearings || hearings.length === 0) && <span style={{ color: 'var(--text-muted)' }}>No hearing records yet</span>}
               </div>
             </div>
             <div className="card" style={{ padding: '1rem' }}>
-              <strong style={{ fontSize: '0.9rem', color: '#0f2c59', display: 'block', marginBottom: '0.75rem' }}>Pleadings Status</strong>
+              <strong style={{ fontSize: '0.9rem', color: 'var(--accent-color)', display: 'block', marginBottom: '0.75rem' }}>Pleadings Status</strong>
               {[
                 { type: 'oa_copy', label: 'Petitioner Copy of OA', icon: '📄' },
                 { type: 'our_reply', label: 'Our Reply / Counter', icon: '📝' },
@@ -738,15 +739,15 @@ export default function CaseDetail() {
               ].map(p => {
                 const existing = pleadings.find(pl => pl.type === p.type);
                 return (
-                  <div key={p.type} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.45rem 0', borderBottom: '1px solid #f0f0f0', fontSize: '0.8rem' }}>
+                  <div key={p.type} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.45rem 0', borderBottom: '1px solid var(--border-light)', fontSize: '0.8rem' }}>
                     <span style={{ fontSize: '1rem' }}>{p.icon}</span>
                     <span style={{ flex: 1, fontWeight: 600 }}>{p.label}</span>
                     {existing ? (
-                      <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.78rem' }}>
+                      <span style={{ color: 'var(--status-disposed)', fontWeight: 600, fontSize: '0.78rem' }}>
                         ✓ {existing.filing_date ? new Date(existing.filing_date).toLocaleDateString('en-GB').replace(/\//g, '-') : 'Filed'}
                       </span>
                     ) : (
-                      <button className="btn btn-sm" style={{ fontSize: '0.7rem', background: '#FFF7ED', color: '#D97706', border: '1px solid #FED7AA' }}
+                      <button className="btn btn-sm" style={{ fontSize: '0.7rem', background: 'var(--saffron-bg)', color: 'var(--status-pending)', border: '1px solid var(--saffron-border)' }}
                         onClick={async () => {
                           const dt = prompt('Filing date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
                           if (dt) {
@@ -765,31 +766,31 @@ export default function CaseDetail() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           {/* Target Milestones Panel */}
-          <div className="glass-panel" style={{ padding: '1.5rem', background: '#fff', border: '1px solid #d1d5db', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1rem', color: '#0f2c59', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem' }}>
+          <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--accent-color)', borderBottom: '1px solid var(--border-light)', paddingBottom: '0.5rem' }}>
               लक्ष्य मील के पत्थर / Milestones
             </h3>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ borderLeft: '3px solid #003366', paddingLeft: '0.75rem' }}>
-                <div style={{ fontSize: '0.75rem', color: '#4b5563', textTransform: 'uppercase', fontWeight: 600 }}>Reply Statement Filing</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: caseObj.date_filing_reply ? '#10b981' : '#f59e0b', marginTop: '0.15rem' }}>
+              <div style={{ borderLeft: '3px solid var(--accent-color)', paddingLeft: '0.75rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Reply Statement Filing</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: caseObj.date_filing_reply ? 'var(--status-disposed)' : 'var(--status-pending)', marginTop: '0.15rem' }}>
                   {caseObj.date_filing_reply ? `Filed: ${new Date(caseObj.date_filing_reply).toLocaleDateString()}` : 'Not Filed'}
                 </div>
                 {caseObj.last_date_reply && (
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.15rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
                     Target Deadline: {new Date(caseObj.last_date_reply).toLocaleDateString()}
                   </div>
                 )}
               </div>
 
-              <div style={{ borderLeft: '3px solid #ff9933', paddingLeft: '0.75rem' }}>
-                <div style={{ fontSize: '0.75rem', color: '#4b5563', textTransform: 'uppercase', fontWeight: 600 }}>Appeal / Compliance Target</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111827', marginTop: '0.15rem' }}>
+              <div style={{ borderLeft: '3px solid var(--saffron)', paddingLeft: '0.75rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Appeal / Compliance Target</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.15rem' }}>
                   {caseObj.last_date_appeal_implementation ? (
                     new Date(caseObj.last_date_appeal_implementation).toLocaleDateString()
                   ) : (
-                    <span style={{ color: '#9ca3af', fontWeight: 'normal' }}>No Deadline Configured</span>
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 'normal' }}>No Deadline Configured</span>
                   )}
                 </div>
               </div>
@@ -797,20 +798,20 @@ export default function CaseDetail() {
           </div>
 
           {/* Party Names Panel */}
-          <div className="glass-panel" style={{ padding: '1.5rem', background: '#fff', border: '1px solid #d1d5db', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1rem', color: '#0f2c59', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem' }}>
+          <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--accent-color)', borderBottom: '1px solid var(--border-light)', paddingBottom: '0.5rem' }}>
               पक्षकार / Litigant Parties
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <span className="metadata-label" style={{ color: '#6b7280' }}>Petitioner / Applicant</span>
-                <p style={{ fontWeight: 700, fontSize: '0.95rem', marginTop: '0.2rem', color: '#1e3a8a' }}>
+                <span className="metadata-label" style={{ color: 'var(--text-muted)' }}>Petitioner / Applicant</span>
+                <p style={{ fontWeight: 700, fontSize: '0.95rem', marginTop: '0.2rem', color: 'var(--accent-hover)' }}>
                   {caseObj.applicant || 'Unknown'}
                 </p>
               </div>
               <div>
-                <span className="metadata-label" style={{ color: '#6b7280' }}>Respondent</span>
-                <p style={{ fontWeight: 700, fontSize: '0.95rem', marginTop: '0.2rem', color: '#111827' }}>
+                <span className="metadata-label" style={{ color: 'var(--text-muted)' }}>Respondent</span>
+                <p style={{ fontWeight: 700, fontSize: '0.95rem', marginTop: '0.2rem', color: 'var(--text-primary)' }}>
                   {caseObj.respondent || 'Union of India & Ors.'}
                 </p>
               </div>
@@ -818,35 +819,35 @@ export default function CaseDetail() {
           </div>
 
           {/* Contact Directory Panel */}
-          <div className="glass-panel" style={{ padding: '1.5rem', background: '#fff', border: '1px solid #d1d5db', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1.25rem', color: '#0f2c59', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem' }}>
+          <div className="glass-panel" style={{ padding: '1.5rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--accent-color)', borderBottom: '1px solid var(--border-light)', paddingBottom: '0.5rem' }}>
               अधिकारी निर्देशिका / Contact Directory
             </h3>
 
-            <div className="contact-card" style={{ background: '#f9fafb', borderColor: '#e5e7eb' }}>
-              <div className="contact-header" style={{ color: '#0f2c59', borderColor: '#e5e7eb' }}>Nodal Officer</div>
+            <div className="contact-card" style={{ background: 'var(--card-hover-bg)', borderColor: 'var(--border-light)' }}>
+              <div className="contact-header" style={{ color: 'var(--accent-color)', borderColor: 'var(--border-light)' }}>Nodal Officer</div>
               <div className="contact-info">
                 <div className="contact-row">
-                  <span className="contact-label" style={{ color: '#4b5563' }}>Name:</span>
-                  <span className="contact-val" style={{ color: '#111827' }}>{caseObj.nodal_officer_name || 'Not Assigned'}</span>
+                  <span className="contact-label" style={{ color: 'var(--text-secondary)' }}>Name:</span>
+                  <span className="contact-val" style={{ color: 'var(--text-primary)' }}>{caseObj.nodal_officer_name || 'Not Assigned'}</span>
                 </div>
                 <div className="contact-row">
-                  <span className="contact-label" style={{ color: '#4b5563' }}>Contact:</span>
-                  <span className="contact-val" style={{ color: '#111827' }}>{caseObj.nodal_officer_contact || 'N/A'}</span>
+                  <span className="contact-label" style={{ color: 'var(--text-secondary)' }}>Contact:</span>
+                  <span className="contact-val" style={{ color: 'var(--text-primary)' }}>{caseObj.nodal_officer_contact || 'N/A'}</span>
                 </div>
               </div>
             </div>
 
-            <div className="contact-card" style={{ background: '#f9fafb', borderColor: '#e5e7eb', marginBottom: 0 }}>
-              <div className="contact-header" style={{ color: '#ff9933', borderColor: '#e5e7eb' }}>Engaged Advocate</div>
+            <div className="contact-card" style={{ background: 'var(--card-hover-bg)', borderColor: 'var(--border-light)', marginBottom: 0 }}>
+              <div className="contact-header" style={{ color: 'var(--saffron)', borderColor: 'var(--border-light)' }}>Engaged Advocate</div>
               <div className="contact-info">
                 <div className="contact-row">
-                  <span className="contact-label" style={{ color: '#4b5563' }}>Name:</span>
-                  <span className="contact-val" style={{ color: '#111827' }}>{caseObj.advocate_name || 'Not Assigned'}</span>
+                  <span className="contact-label" style={{ color: 'var(--text-secondary)' }}>Name:</span>
+                  <span className="contact-val" style={{ color: 'var(--text-primary)' }}>{caseObj.advocate_name || 'Not Assigned'}</span>
                 </div>
                 <div className="contact-row">
-                  <span className="contact-label" style={{ color: '#4b5563' }}>Contact:</span>
-                  <span className="contact-val" style={{ color: '#111827' }}>{caseObj.advocate_contact || 'N/A'}</span>
+                  <span className="contact-label" style={{ color: 'var(--text-secondary)' }}>Contact:</span>
+                  <span className="contact-val" style={{ color: 'var(--text-primary)' }}>{caseObj.advocate_contact || 'N/A'}</span>
                 </div>
               </div>
             </div>
@@ -867,9 +868,9 @@ export default function CaseDetail() {
       {/* Record Affidavit Modal */}
       {isAddAffidavitOpen && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ background: '#fff', border: '1px solid #d1d5db', maxWidth: '500px' }}>
-            <div className="modal-header" style={{ borderBottom: '1px solid #e5e7eb' }}>
-              <h3 style={{ color: '#0f2c59', fontWeight: 700, margin: 0 }}>शपथ पत्र रिकॉर्ड करें / Record Affidavit Filing</h3>
+          <div className="modal-content" style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', maxWidth: '500px' }}>
+            <div className="modal-header" style={{ borderBottom: '1px solid var(--border-light)' }}>
+              <h3 style={{ color: 'var(--accent-color)', fontWeight: 700, margin: 0 }}>शपथ पत्र रिकॉर्ड करें / Record Affidavit Filing</h3>
               <button className="modal-close-btn" onClick={() => setIsAddAffidavitOpen(false)}>&times;</button>
             </div>
             <form onSubmit={handleAddAffidavit}>
@@ -881,7 +882,7 @@ export default function CaseDetail() {
                 )}
 
                 <div className="form-group">
-                  <label className="form-label" style={{ color: '#4b5563' }}>Filing Date / दाखिल करने की तिथि</label>
+                  <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Filing Date / दाखिल करने की तिथि</label>
                   <input
                     type="date"
                     className="form-control"
@@ -892,10 +893,10 @@ export default function CaseDetail() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ color: '#4b5563' }}>Filed By / किसके द्वारा दायर किया गया</label>
+                  <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Filed By / किसके द्वारा दायर किया गया</label>
                   <select
                     className="select-input"
-                    style={{ width: '100%', height: '40px', background: '#fff', borderColor: '#d1d5db', padding: '0.375rem 0.75rem' }}
+                    style={{ width: '100%', height: '40px', background: 'var(--card-bg)', borderColor: 'var(--border-color)', padding: '0.375rem 0.75rem' }}
                     value={newAffidavit.filed_by}
                     onChange={(e) => setNewAffidavit(prev => ({ ...prev, filed_by: e.target.value }))}
                     required
@@ -906,7 +907,7 @@ export default function CaseDetail() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ color: '#4b5563' }}>Affidavit Type or Stage / शपथ पत्र का प्रकार</label>
+                  <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Affidavit Type or Stage / शपथ पत्र का प्रकार</label>
                   <input
                     type="text"
                     className="form-control"
@@ -918,9 +919,9 @@ export default function CaseDetail() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#4b5563' }}>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)' }}>
                     <span>Upload PDF Affidavit Document</span>
-                    {affidavitExtracting && <span style={{ fontSize: '0.75rem', color: '#d97706', fontWeight: 600 }}>⚡ Extracting text...</span>}
+                    {affidavitExtracting && <span style={{ fontSize: '0.75rem', color: 'var(--status-pending)', fontWeight: 600 }}>⚡ Extracting text...</span>}
                   </label>
                   <input
                     type="file"
@@ -930,13 +931,13 @@ export default function CaseDetail() {
                     disabled={affidavitExtracting || affidavitSubmitting}
                     style={{ padding: '0.375rem 0.75rem' }}
                   />
-                  <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                  <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
                     Directly upload the PDF file to automatically populate notes & comments.
                   </small>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ color: '#4b5563' }}>Notes & Comments / टिप्पणी (Optional)</label>
+                  <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Notes & Comments / टिप्पणी (Optional)</label>
                   <textarea
                     className="form-control"
                     placeholder="Provide details about who filed it, major declarations, or references..."
@@ -947,7 +948,7 @@ export default function CaseDetail() {
                 </div>
               </div>
 
-              <div className="modal-footer" style={{ borderTop: '1px solid #e5e7eb' }}>
+              <div className="modal-footer" style={{ borderTop: '1px solid var(--border-light)' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setIsAddAffidavitOpen(false)} disabled={affidavitSubmitting}>
                   Cancel
                 </button>
@@ -963,9 +964,9 @@ export default function CaseDetail() {
       {/* Edit Original Tribunal Details Modal */}
       {isEditTribunalOpen && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ background: '#fff', border: '1px solid #d1d5db', maxWidth: '500px' }}>
-            <div className="modal-header" style={{ borderBottom: '1px solid #e5e7eb' }}>
-              <h3 style={{ color: '#0f2c59', fontWeight: 700, margin: 0 }}>मूल अधिकरण संदर्भ विवरण संपादित करें / Edit Original Tribunal Details</h3>
+          <div className="modal-content" style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', maxWidth: '500px' }}>
+            <div className="modal-header" style={{ borderBottom: '1px solid var(--border-light)' }}>
+              <h3 style={{ color: 'var(--accent-color)', fontWeight: 700, margin: 0 }}>मूल अधिकरण संदर्भ विवरण संपादित करें / Edit Original Tribunal Details</h3>
               <button className="modal-close-btn" onClick={() => setIsEditTribunalOpen(false)}>&times;</button>
             </div>
             <form onSubmit={handleSaveTribunal}>
@@ -977,7 +978,7 @@ export default function CaseDetail() {
                 )}
 
                 <div className="form-group">
-                  <label className="form-label" style={{ color: '#4b5563' }}>Original Case No. (OA) / मूल मामला संख्या (ओए)</label>
+                  <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Original Case No. (OA) / मूल मामला संख्या (ओए)</label>
                   <input
                     type="text"
                     className="form-control"
@@ -988,7 +989,7 @@ export default function CaseDetail() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ color: '#4b5563' }}>Original Forum / Tribunal / मूल फोरम / अधिकरण</label>
+                  <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Original Forum / Tribunal / मूल फोरम / अधिकरण</label>
                   <input
                     type="text"
                     className="form-control"
@@ -999,7 +1000,7 @@ export default function CaseDetail() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ color: '#4b5563' }}>Date of Disposal by Tribunal / अधिकरण द्वारा निपटान की तिथि</label>
+                  <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Date of Disposal by Tribunal / अधिकरण द्वारा निपटान की तिथि</label>
                   <input
                     type="date"
                     className="form-control"
@@ -1009,7 +1010,7 @@ export default function CaseDetail() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ color: '#4b5563' }}>Tribunal Outcome / Status / अधिकरण परिणाम / स्थिति</label>
+                  <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Tribunal Outcome / Status / अधिकरण परिणाम / स्थिति</label>
                   <input
                     type="text"
                     className="form-control"
@@ -1020,11 +1021,11 @@ export default function CaseDetail() {
                 </div>
               </div>
 
-              <div className="modal-footer" style={{ borderTop: '1px solid #e5e7eb' }}>
+              <div className="modal-footer" style={{ borderTop: '1px solid var(--border-light)' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setIsEditTribunalOpen(false)} disabled={tribunalSaving}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ background: '#ff9933', borderColor: '#ff9933' }} disabled={tribunalSaving}>
+                <button type="submit" className="btn btn-primary" style={{ background: 'var(--saffron)', borderColor: 'var(--saffron)' }} disabled={tribunalSaving}>
                   {tribunalSaving ? 'Saving...' : 'Save Details'}
                 </button>
               </div>

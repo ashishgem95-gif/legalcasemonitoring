@@ -256,6 +256,19 @@ db.exec(`
 `);
 console.log('case_alerts table verified/created.');
 
+// ── case_alert_reads (per-user read state for alerts) ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS case_alert_reads (
+    alert_id INTEGER NOT NULL,
+    user_id VARCHAR NOT NULL,
+    read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (alert_id, user_id),
+    FOREIGN KEY (alert_id) REFERENCES case_alerts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+`);
+console.log('case_alert_reads table verified/created.');
+
 // ── users ──
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (

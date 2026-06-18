@@ -29,7 +29,7 @@ export default function DayCell({ day, hearings, isCurrentMonth, onClick }) {
           <div key={i} className={`calendar-dot ${getUrgency(h.next_hearing_date)}`} title={h.case_ref_no} />
         ))}
         {moreCount > 0 && (
-          <span style={{ fontSize: '0.6rem', color: '#6b7280' }}>+{moreCount}</span>
+          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>+{moreCount}</span>
         )}
       </div>
     </div>

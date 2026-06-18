@@ -11,6 +11,8 @@ import Login from './components/Login';
 import AiDraftReply from './components/AiDraftReply';
 import FileActivityAlerts from './components/FileActivityAlerts';
 import ErrorBoundary from './components/ErrorBoundary';
+import DensityToggle from './components/DensityToggle';
+import NotificationBell from './components/NotificationBell';
 import api from './utils/api';
 import { ThemeProvider, useTheme } from './utils/ThemeContext';
 
@@ -111,6 +113,8 @@ function Header({ user, onLogout }) {
         {/* Right side: Settings + User */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <GearSettings />
+          <NotificationBell />
+          <DensityToggle />
           <DarkToggle />
           {user && (
             <div className="user-pill">

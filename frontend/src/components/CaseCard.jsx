@@ -2,6 +2,10 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { differenceInDays, isBefore, isToday, isAfter, startOfDay } from 'date-fns';
+import StatusChip from './StatusChip';
+import CopyLinkButton from './CopyLinkButton';
+import CasePreview from './CasePreview';
+import { useHoverPreview } from '../utils/useHoverPreview';
 
 function getDaysClass(dateStr) {
   if (!dateStr) return 'upcoming';
@@ -31,6 +35,7 @@ function getDaysLabel(dateStr) {
 export default function CaseCard({ caseItem }) {
   const navigate = useNavigate();
   const [resyncing, setResyncing] = React.useState(false);
+  const { visible, position, pinned, triggerProps, previewProps } = useHoverPreview();
 
   const isAdmin = (() => {
     try {
@@ -48,17 +53,23 @@ export default function CaseCard({ caseItem }) {
   };
 
   return (
-    <div className="case-card" onClick={() => navigate(`/cases/${caseItem.id}`)}>
-      <div className="case-card-ref">{caseItem.case_ref_no}</div>
+    <div
+      className="case-card"
+      onClick={() => navigate(`/cases/${caseItem.id}`)}
+      onMouseEnter={triggerProps.onMouseEnter}
+      onMouseLeave={triggerProps.onMouseLeave}
+    >
+      <div className="case-card-ref" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.25rem' }}>
+        <span>{caseItem.case_ref_no}</span>
+        <CopyLinkButton caseId={caseItem.id} size="xs" />
+      </div>
       <div className="case-card-parties">
         {caseItem.applicant?.substring(0, 40) || 'N/A'}
       </div>
       <div className="case-card-meta">
         <span className="case-card-forum">{caseItem.forum || 'N/A'}</span>
         {caseItem.present_status && (
-          <span style={{ fontSize: '0.65rem', color: '#374151', fontWeight: 600 }}>
-            {caseItem.present_status}
-          </span>
+          <StatusChip status={caseItem.present_status} style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }} />
         )}
         <span className={`case-card-days ${getDaysClass(caseItem.next_hearing_date)}`}>
           {getDaysLabel(caseItem.next_hearing_date)}
@@ -69,16 +80,17 @@ export default function CaseCard({ caseItem }) {
             disabled={resyncing}
             style={{
               fontSize: '0.6rem', padding: '0.15rem 0.3rem', background: 'none',
-              border: '1px solid #d1d5db', borderRadius: '3px', cursor: 'pointer',
-              color: resyncing ? '#9ca3af' : '#0f2c59', fontWeight: 600,
+              border: '1px solid var(--border-color)', borderRadius: '3px', cursor: 'pointer',
+              color: resyncing ? 'var(--text-muted)' : 'var(--accent-color)', fontWeight: 600,
               marginLeft: 'auto'
             }}
             title="Re-sync from CAT"
           >
-            {resyncing ? '⟳' : '🔄'}
+            {resyncing ? '\u27F3' : '\u{1F504}'}
           </button>
         )}
       </div>
+      <CasePreview caseItem={caseItem} visible={visible} position={position} pinned={pinned} previewProps={previewProps} />
     </div>
   );
 }

@@ -101,7 +101,7 @@ export default function KanbanTab({ refreshKey }) {
           onChange={e => setSearchText(e.target.value)}
           style={{ flex: 1, minWidth: '200px' }}
         />
-        <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>
+        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
           Showing {filtered.length} of {cases.length} cases
         </span>
       </div>
@@ -109,7 +109,7 @@ export default function KanbanTab({ refreshKey }) {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '3rem' }}><div className="spinner" /></div>
       ) : error ? (
-        <div className="glass-panel" style={{ background: '#fff', border: '1px solid #fecaca', textAlign: 'center', padding: '2.5rem', color: '#991b1b' }}>
+        <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--red)', textAlign: 'center', padding: '2.5rem', color: 'var(--red)' }}>
           <p style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.75rem' }}>{error}</p>
           <button className="btn btn-primary" onClick={() => fetchCases(true)}>Retry</button>
         </div>
