@@ -11,6 +11,7 @@ import Login from './components/Login';
 import AiDraftReply from './components/AiDraftReply';
 import FileActivityAlerts from './components/FileActivityAlerts';
 import api from './utils/api';
+import { ThemeProvider, useTheme } from './utils/ThemeContext';
 
 
 function GearSettings() {
@@ -68,19 +69,15 @@ function GearSettings() {
 }
 
 function DarkToggle() {
-  const [dark, setDark] = React.useState(() => localStorage.getItem('theme') === 'dark');
-  React.useEffect(() => {
-    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    localStorage.setItem('theme', dark ? 'dark' : 'light');
-  }, [dark]);
+  const { isDark, toggleTheme } = useTheme();
   return (
     <button
-      onClick={() => setDark(!dark)}
+      onClick={toggleTheme}
       className="header-icon-btn dark-toggle-btn"
-      aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-      title={dark ? 'Light mode' : 'Dark mode'}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={isDark ? 'Light mode' : 'Dark mode'}
     >
-      <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>{dark ? '☀️' : '🌙'}</span>
+      <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>{isDark ? '☀️' : '🌙'}</span>
     </button>
   );
 }
@@ -236,38 +233,40 @@ export default function App() {
   }
 
   return (
-    <Router>
-      <div className="app-container">
-        <FileActivityAlerts user={user} />
-        <Header user={user} onLogout={handleLogout} />
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/analysis" element={<Analysis />} />
-            <Route path="/cases" element={<CaseList />} />
-            <Route path="/cases/new" element={<CaseForm />} />
-            <Route path="/cases/:id" element={<CaseDetail />} />
-            <Route path="/cases/:id/edit" element={<CaseForm />} />
-            <Route path="/citations" element={isAdmin ? <Citations /> : <Navigate to="/" replace />} />
-            <Route path="/ai-draft" element={isAdmin ? <AiDraftReply /> : <Navigate to="/" replace />} />
-            <Route path="/file-registry/*" element={isAdmin ? <FileRegistryApp /> : <Navigate to="/" replace />} />
-            <Route path="*" element={<div className="notfound-wrap">
-              <h2 className="notfound-title">404 - Page Not Found</h2>
-              <p className="notfound-sub">The page you are looking for does not exist.</p>
-              <button onClick={() => window.history.back()} className="notfound-btn">Go Back</button>
-            </div>} />
-          </Routes>
-        </main>
-        
-        <footer className="goi-footer">
-          <div className="footer-content">
-            <p>© 2026 Ministry of Railways (Railway Board), Government of India. All Rights Reserved.</p>
-            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-              Designed for legal monitoring & automated case order auditing in compliance with Rule 56(j) and UPSC Advice.
-            </p>
-          </div>
-        </footer>
-      </div>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <div className="app-container">
+          <FileActivityAlerts user={user} />
+          <Header user={user} onLogout={handleLogout} />
+          <main className="main-content">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/analysis" element={<Analysis />} />
+              <Route path="/cases" element={<CaseList />} />
+              <Route path="/cases/new" element={<CaseForm />} />
+              <Route path="/cases/:id" element={<CaseDetail />} />
+              <Route path="/cases/:id/edit" element={<CaseForm />} />
+              <Route path="/citations" element={isAdmin ? <Citations /> : <Navigate to="/" replace />} />
+              <Route path="/ai-draft" element={isAdmin ? <AiDraftReply /> : <Navigate to="/" replace />} />
+              <Route path="/file-registry/*" element={isAdmin ? <FileRegistryApp /> : <Navigate to="/" replace />} />
+              <Route path="*" element={<div className="notfound-wrap">
+                <h2 className="notfound-title">404 - Page Not Found</h2>
+                <p className="notfound-sub">The page you are looking for does not exist.</p>
+                <button onClick={() => window.history.back()} className="notfound-btn">Go Back</button>
+              </div>} />
+            </Routes>
+          </main>
+
+          <footer className="goi-footer">
+            <div className="footer-content">
+              <p>© 2026 Ministry of Railways (Railway Board), Government of India. All Rights Reserved.</p>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                Designed for legal monitoring & automated case order auditing in compliance with Rule 56(j) and UPSC Advice.
+              </p>
+            </div>
+          </footer>
+        </div>
+      </Router>
+    </ThemeProvider>
   );
 }

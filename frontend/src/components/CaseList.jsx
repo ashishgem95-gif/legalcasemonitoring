@@ -199,6 +199,10 @@ export default function CaseList() {
   }, [searchText, selectedStatus, selectedForum, selectedYear, selectedRailway]);
 
   useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(1);
+  }, [totalPages, currentPage]);
+
+  useEffect(() => {
     const status = searchParams.get('status');
     const forum = searchParams.get('forum');
     const year = searchParams.get('year');

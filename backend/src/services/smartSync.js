@@ -1,11 +1,11 @@
 const { run, get, all } = require('../config/dbHelper');
 const { db } = require('../config/database');
 const { logger } = require('../config/logger');
-const { DISPOSED_STATUSES } = require('../config/constants');
+const { DISPOSED_STATUSES, istToday } = require('../config/constants');
 
 const CONCURRENCY = 20;
 const FETCH_TIMEOUT = 15000;
-const today = new Date().toISOString().split('T')[0];
+const today = istToday();
 
 function parseDate(str) {
   if (!str) return null;

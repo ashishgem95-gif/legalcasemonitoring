@@ -5,6 +5,11 @@ const { logger } = require('../config/logger');
 
 const STORAGE_DIR = path.resolve(__dirname, '..', '..', '..', 'document_archive');
 
+function checkCaseAccess(caseRecord, user) {
+  if (!user || user.railwayScope === 'All') return true;
+  return caseRecord.railway === user.railwayScope;
+}
+
 // Ensure storage directory exists
 try {
   if (!fs.existsSync(STORAGE_DIR)) {
@@ -32,9 +37,12 @@ exports.uploadDocument = (req, res) => {
     }
 
     const caseId = req.params.id;
-    const caseRecord = get('SELECT id FROM cases WHERE id = ?', [caseId]);
+    const caseRecord = get('SELECT id, railway FROM cases WHERE id = ?', [caseId]);
     if (!caseRecord) {
       return res.status(404).json({ error: 'Case not found' });
+    }
+    if (!checkCaseAccess(caseRecord, req.user)) {
+      return res.status(403).json({ error: 'Access denied for this case.' });
     }
 
     const ext = path.extname(req.file.originalname);
@@ -75,6 +83,9 @@ exports.uploadDocument = (req, res) => {
 // GET /api/cases/:id/documents
 exports.getDocuments = (req, res) => {
   try {
+    const caseRecord = get('SELECT id, railway FROM cases WHERE id = ?', [req.params.id]);
+    if (!caseRecord) return res.status(404).json({ error: 'Case not found' });
+    if (!checkCaseAccess(caseRecord, req.user)) return res.status(403).json({ error: 'Access denied for this case.' });
     const docs = all(
       `SELECT id, case_id, original_name, mime_type, file_size, storage_path, uploaded_by, created_at
        FROM case_documents WHERE case_id = ? ORDER BY created_at DESC`,
@@ -90,9 +101,12 @@ exports.getDocuments = (req, res) => {
 // GET /api/documents/:id/download
 exports.downloadDocument = (req, res) => {
   try {
-    const doc = get('SELECT * FROM case_documents WHERE id = ?', [req.params.id]);
+    const doc = get('SELECT d.*, c.railway FROM case_documents d JOIN cases c ON d.case_id = c.id WHERE d.id = ?', [req.params.id]);
     if (!doc) {
       return res.status(404).json({ error: 'Document not found' });
+    }
+    if (!checkCaseAccess(doc, req.user)) {
+      return res.status(403).json({ error: 'Access denied for this case.' });
     }
 
     // If storage_path is an external URL, redirect

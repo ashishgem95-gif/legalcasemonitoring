@@ -78,14 +78,14 @@ exports.callLLM = async ({ provider, model, apiKey, prompt }) => {
   try {
     // 1. Google Gemini
     if (selectedProvider === 'gemini') {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${key}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent`;
       const payload = {
         contents: [{
           parts: [{ text: prompt }]
         }]
       };
       const response = await makeRequest(url, {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }
       }, payload);
       
       const parsed = JSON.parse(response);

@@ -11,7 +11,13 @@ exports.getCaseSummary = (req, res) => {
       WHERE 1=1`;
     const params = [];
 
-    if (railway) { query += ' AND c.railway = ?'; params.push(railway); }
+    if (req._railwayScope) {
+      query += ' AND c.railway = ?';
+      params.push(req._railwayScope);
+    } else if (railway) {
+      query += ' AND c.railway = ?';
+      params.push(railway);
+    }
     if (from_date) { query += ' AND c.created_at >= ?'; params.push(from_date); }
     if (to_date) { query += ' AND c.created_at <= ?'; params.push(to_date); }
 
@@ -79,7 +85,8 @@ exports.exportCases = (req, res) => {
       forum, present_status, last_date_reply, date_filing_reply, nodal_officer_name
       FROM cases WHERE 1=1`;
     const params = [];
-    if (railway) { query += ' AND railway = ?'; params.push(railway); }
+    if (req._railwayScope) { query += ' AND railway = ?'; params.push(req._railwayScope); }
+    else if (railway) { query += ' AND railway = ?'; params.push(railway); }
     query += ' ORDER BY case_ref_no';
 
     const rows = all(query, params);

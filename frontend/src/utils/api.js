@@ -1,4 +1,4 @@
-const API_BASE_URL = `http://${window.location.hostname}:5000/api`;
+const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:5000/api`;
 
 function getAuthToken() {
   return localStorage.getItem('ccms_token');
@@ -102,6 +102,15 @@ export const api = {
     if (scope) query.append('railway', scope);
     const qs = query.toString();
     return request(`/cases${qs ? `?${qs}` : ''}`);
+  },
+  checkCaseDuplicate: (data) => {
+    const query = new URLSearchParams();
+    if (data.case_ref_no) query.append('case_ref_no', data.case_ref_no);
+    if (data.forum) query.append('forum', data.forum);
+    if (data.case_type) query.append('case_type', data.case_type);
+    if (data.case_number) query.append('case_number', data.case_number);
+    if (data.case_year) query.append('case_year', data.case_year);
+    return request(`/cases/check-duplicate?${query.toString()}`);
   },
   getCaseById: (id) => request(`/cases/${id}`),
   createCase: (caseData) => request('/cases', { method: 'POST', body: caseData }),

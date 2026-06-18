@@ -30,18 +30,23 @@ const COLUMNS = [
 export default function KanbanTab({ refreshKey }) {
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('All');
   const [forumFilter, setForumFilter] = useState('All');
   const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
-    fetchCases();
+    let active = true;
+    fetchCases(active);
+    return () => { active = false; };
   }, [refreshKey]);
 
-  const fetchCases = async () => {
+  const fetchCases = async (active) => {
     setLoading(true);
+    setError(null);
     try {
       const data = await api.getCases();
+      if (!active) return;
       const localToday = startOfDay(new Date());
       const filteredData = (data || []).filter(c => {
         if (c.has_pending_order_upload) return true;
@@ -53,8 +58,9 @@ export default function KanbanTab({ refreshKey }) {
       setCases(filteredData);
     } catch (err) {
       console.error('Failed to load cases:', err);
+      if (active) setError('Failed to load Kanban board. Please try refreshing.');
     } finally {
-      setLoading(false);
+      if (active) setLoading(false);
     }
   };
 
@@ -102,6 +108,11 @@ export default function KanbanTab({ refreshKey }) {
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '3rem' }}><div className="spinner" /></div>
+      ) : error ? (
+        <div className="glass-panel" style={{ background: '#fff', border: '1px solid #fecaca', textAlign: 'center', padding: '2.5rem', color: '#991b1b' }}>
+          <p style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.75rem' }}>{error}</p>
+          <button className="btn btn-primary" onClick={() => fetchCases(true)}>Retry</button>
+        </div>
       ) : (
         <div className="kanban-board">
           {COLUMNS.map(col => {

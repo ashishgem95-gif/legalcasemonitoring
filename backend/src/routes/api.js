@@ -7,12 +7,28 @@ const { validate, caseSchema, hearingSchema, citationSchema, personnelSchema, ph
 const { logger } = require('../config/logger');
 const { generateReply } = require('../services/promptService');
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf' || file.mimetype === 'application/octet-stream') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed.'), false);
+    }
+  },
+});
 
 const syncLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: 3,
   message: { error: 'Too many sync requests. Please wait before trying again.' }
+});
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: 'Too many AI requests. Please slow down (max 10/min).' }
 });
 
 // ── Auth Endpoints (public) ──
@@ -25,12 +41,13 @@ router.post('/auth/logout', logout);
 const {
   getCases, getCaseById, createCase, updateCase, deleteCase,
   updateCaseStatus, updateCaseNextHearing,
-  parseCase, parsePdfCaseFile, extractPdfText
+  parseCase, parsePdfCaseFile, extractPdfText, checkDuplicate
 } = require('../controllers/caseController');
 router.get('/cases', enforceScope, getCases);
-router.post('/cases/parse-file', parseCase);
-router.post('/cases/parse-pdf', upload.single('file'), parsePdfCaseFile);
-router.post('/extract-pdf', upload.single('file'), extractPdfText);
+router.get('/cases/check-duplicate', checkDuplicate);
+router.post('/cases/parse-file', aiLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), parseCase);
+router.post('/cases/parse-pdf', aiLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), upload.single('file'), parsePdfCaseFile);
+router.post('/extract-pdf', aiLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), upload.single('file'), extractPdfText);
 router.get('/cases/:id', getCaseById);
 router.post('/cases', validate(caseSchema), enforceScopeBody, createCase);
 router.put('/cases/:id', validate(caseSchema), enforceScopeBody, updateCase);
@@ -43,35 +60,35 @@ const { getAlerts, markAlertAsRead, markAllAlertsAsRead, triggerManualCrawl, che
 router.get('/alerts', enforceScope, getAlerts);
 router.put('/alerts/:id/read', markAlertAsRead);
 router.put('/alerts/read-all', markAllAlertsAsRead);
-router.post('/alerts/trigger-crawl', triggerManualCrawl);
-router.post('/alerts/check-due-cases', checkDueCases);
+router.post('/alerts/trigger-crawl', requireRole('Super Admin / Central Legal Cell', 'admin'), triggerManualCrawl);
+router.post('/alerts/check-due-cases', requireRole('Super Admin / Central Legal Cell', 'admin'), checkDueCases);
 
 // ── Hearings ──
 const { getHearingsForCase, addHearingToCase, setHearingOrderUploaded } = require('../controllers/hearingController');
-router.get('/cases/:id/hearings', getHearingsForCase);
-router.post('/cases/:id/hearings', validate(hearingSchema), addHearingToCase);
+router.get('/cases/:id/hearings', enforceScope, getHearingsForCase);
+router.post('/cases/:id/hearings', enforceScope, validate(hearingSchema), addHearingToCase);
 router.patch('/cases/:caseId/hearings/:hearingId/order-uploaded', setHearingOrderUploaded);
 
 // ── Citations ──
 const { getCitations, createCitation, updateCitation, deleteCitation, parseCitationPdf } = require('../controllers/citationController');
 router.get('/citations', getCitations);
-router.post('/citations', validate(citationSchema), createCitation);
-router.post('/citations/parse-pdf', upload.single('file'), parseCitationPdf);
+router.post('/citations', requireRole('Super Admin / Central Legal Cell', 'admin'), validate(citationSchema), createCitation);
+router.post('/citations/parse-pdf', aiLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), upload.single('file'), parseCitationPdf);
 router.put('/citations/:id', requireRole('Super Admin / Central Legal Cell', 'admin'), validate(citationSchema), updateCitation);
 router.delete('/citations/:id', requireRole('Super Admin / Central Legal Cell', 'admin'), deleteCitation);
 
 // ── Affidavits ──
 const { getAffidavitsForCase, addAffidavitToCase, deleteAffidavit } = require('../controllers/affidavitController');
-router.get('/cases/:id/affidavits', getAffidavitsForCase);
-router.post('/cases/:id/affidavits', addAffidavitToCase);
+router.get('/cases/:id/affidavits', enforceScope, getAffidavitsForCase);
+router.post('/cases/:id/affidavits', enforceScope, addAffidavitToCase);
 router.delete('/affidavits/:id', deleteAffidavit);
 
 // ── Personnel ──
 const { getPersonnel, createPersonnel, updatePersonnel, deletePersonnel } = require('../controllers/personnelController');
 router.get('/personnel', getPersonnel);
-router.post('/personnel', validate(personnelSchema), createPersonnel);
-router.put('/personnel/:id', validate(personnelSchema), updatePersonnel);
-router.delete('/personnel/:id', deletePersonnel);
+router.post('/personnel', requireRole('Super Admin / Central Legal Cell', 'admin'), validate(personnelSchema), createPersonnel);
+router.put('/personnel/:id', requireRole('Super Admin / Central Legal Cell', 'admin'), validate(personnelSchema), updatePersonnel);
+router.delete('/personnel/:id', requireRole('Super Admin / Central Legal Cell', 'admin'), deletePersonnel);
 
 // ── Physical Files ──
 const { getFiles, getFileById, createFile, updateFile, deleteFile } = require('../controllers/fileRegistryController');
@@ -116,14 +133,14 @@ router.get('/search', enforceScope, search);
 
 // ── Document Archival ──
 const { uploadDocument, getDocuments, downloadDocument } = require('../controllers/documentController');
-router.post('/cases/:id/documents', upload.single('file'), uploadDocument);
-router.get('/cases/:id/documents', getDocuments);
-router.get('/documents/:id/download', downloadDocument);
+router.post('/cases/:id/documents', enforceScope, upload.single('file'), uploadDocument);
+router.get('/cases/:id/documents', enforceScope, getDocuments);
+router.get('/documents/:id/download', enforceScope, downloadDocument);
 
 // ── Pleadings ──
 const { getPleadings, addPleading, updatePleading, deletePleading } = require('../controllers/pleadingController');
-router.get('/cases/:id/pleadings', getPleadings);
-router.post('/cases/:id/pleadings', addPleading);
+router.get('/cases/:id/pleadings', enforceScope, getPleadings);
+router.post('/cases/:id/pleadings', enforceScope, addPleading);
 router.put('/pleadings/:id', updatePleading);
 router.delete('/pleadings/:id', deletePleading);
 
@@ -133,15 +150,16 @@ router.get('/audit-log', requireRole('Super Admin / Central Legal Cell', 'admin'
 
 // ── Batch Sync ──
 const { triggerBatchSync, triggerPlaywrightSync, triggerOrderSync, triggerSmartSync, getSyncStatus, resyncSingleCase } = require('../controllers/syncController');
-router.post('/sync/start', syncLimiter, triggerBatchSync);
-router.post('/sync/playwright', syncLimiter, triggerPlaywrightSync);
-router.post('/sync/orders', syncLimiter, triggerOrderSync);
+router.post('/sync/start', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), triggerBatchSync);
+router.post('/sync/playwright', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), triggerPlaywrightSync);
+router.post('/sync/orders', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), triggerOrderSync);
 router.post('/sync/smart', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), triggerSmartSync);
 router.post('/sync/case/:id', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), resyncSingleCase);
 router.get('/sync/status', getSyncStatus);
 
 // ── AI Affidavit Drafting ──
 router.post('/ai/draft-reply',
+  aiLimiter,
   requireRole('Super Admin / Central Legal Cell', 'admin'),
   async (req, res) => {
     try {

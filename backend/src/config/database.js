@@ -85,10 +85,13 @@ db.exec(`
     hearing_date DATE NOT NULL,
     order_raw_text TEXT,
     order_summary TEXT,
+    order_uploaded INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
   );
 `);
+// Backfill column on existing DBs where the migration wasn't run
+try { db.exec("ALTER TABLE hearing_history ADD COLUMN order_uploaded INTEGER DEFAULT 0;"); } catch (e) { /* column already exists */ }
 db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_hearing_case_date
   ON hearing_history(case_id, hearing_date);
@@ -446,6 +449,15 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_file_movements_to_custodian_id ON file_m
 db.exec(`CREATE INDEX IF NOT EXISTS idx_view_presets_user_id ON view_presets(user_id);`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_case_documents_case_id ON case_documents(case_id);`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_case_affidavits_case_id ON case_affidavits(case_id);`);
+// Additional performance indexes (audit-backed)
+db.exec(`CREATE INDEX IF NOT EXISTS idx_cases_updated_at_id ON cases(updated_at DESC, id DESC);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_cases_status_next_hearing ON cases(present_status, next_hearing_date);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_cases_forum ON cases(forum);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_cases_case_type ON cases(case_type);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_cases_created_at ON cases(created_at);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_hearing_history_hearing_date ON hearing_history(hearing_date);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_case_documents_case_storage ON case_documents(case_id, storage_path);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_case_pleadings_case_id ON case_pleadings(case_id);`);
 console.log('Performance indexes verified/created.');
 
 module.exports = { db, PASSWORD_ITERATIONS };

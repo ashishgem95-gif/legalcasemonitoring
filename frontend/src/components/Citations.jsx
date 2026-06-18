@@ -309,6 +309,12 @@ export default function Citations() {
                             e.preventDefault();
                             setPdfFile(null);
                             setAiError(null);
+                            setNewCitation({
+                              category: '56j',
+                              title: '',
+                              description: '',
+                              where_to_cite: '',
+                            });
                             document.getElementById('citation-pdf-input').value = '';
                           }}
                         >

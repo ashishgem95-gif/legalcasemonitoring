@@ -11,19 +11,27 @@ const getCases = async (req, res) => {
     const { search, status, case_type, railway } = req.query;
     let query = `
       SELECT c.*,
-             COALESCE(c.next_hearing_date, (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id)) AS next_hearing_date,
-             (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id) AS last_hearing_date,
-             (SELECT order_raw_text FROM hearing_history WHERE case_id = c.id ORDER BY hearing_date DESC LIMIT 1) AS last_hearing_order,
-             (SELECT order_uploaded FROM hearing_history WHERE case_id = c.id ORDER BY hearing_date DESC LIMIT 1) AS last_hearing_order_uploaded,
+             COALESCE(c.next_hearing_date, lh.last_hearing_date) AS next_hearing_date,
+             lh.last_hearing_date AS last_hearing_date,
+             lh.last_hearing_order AS last_hearing_order,
+             lh.last_hearing_uploaded AS last_hearing_order_uploaded,
              CASE
                WHEN COALESCE(c.present_status, 'Pending') = 'Disposed' THEN 0
-               WHEN (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id) IS NULL THEN 0
-               WHEN (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id) >= DATE('now') THEN 0
-               WHEN (SELECT MAX(hearing_date) FROM hearing_history WHERE case_id = c.id) < DATE('now', '-30 days') THEN 0
-               WHEN (SELECT order_uploaded FROM hearing_history WHERE case_id = c.id ORDER BY hearing_date DESC LIMIT 1) = 1 THEN 0
-               ELSE 1
+               WHEN lh.last_hearing_date IS NULL THEN 0
+               WHEN lh.last_hearing_date >= DATE('now') THEN 0
+               WHEN lh.last_hearing_date < DATE('now', '-30 days') THEN 0
+               WHEN COALESCE(lh.last_hearing_uploaded, 0) = 1 THEN 0
+               WHEN COALESCE(lh.last_hearing_order, '') = '' THEN 1
+               ELSE 0
              END AS has_pending_order_upload
       FROM cases c
+      LEFT JOIN (
+        SELECT h1.case_id, h1.hearing_date AS last_hearing_date, h1.order_raw_text AS last_hearing_order, h1.order_uploaded AS last_hearing_uploaded
+        FROM hearing_history h1
+        JOIN (
+          SELECT case_id, MAX(hearing_date) AS max_date FROM hearing_history GROUP BY case_id
+        ) h2 ON h1.case_id = h2.case_id AND h1.hearing_date = h2.max_date
+      ) lh ON lh.case_id = c.id
       WHERE 1=1
     `;
     const params = [];
@@ -350,8 +358,59 @@ const updateCaseNextHearing = async (req, res) => {
   }
 };
 
+// GET /api/cases/check-duplicate
+const checkDuplicate = (req, res) => {
+  try {
+    const { case_ref_no, forum, case_type, case_number, case_year } = req.query;
+    if (!case_ref_no && !forum && !case_number && !case_year) {
+      return res.status(400).json({ error: 'At least one search parameter is required.' });
+    }
+
+    const scopeFilter = req._railwayScope ? ' AND railway = ?' : '';
+    const scopeParams = req._railwayScope ? [req._railwayScope] : [];
+
+    // Exact match on case_ref_no
+    let exactMatch = null;
+    if (case_ref_no) {
+      exactMatch = get(
+        `SELECT id, case_ref_no, applicant, respondent, forum, railway, present_status, next_hearing_date FROM cases WHERE case_ref_no = ? ${scopeFilter}`,
+        [case_ref_no, ...scopeParams]
+      );
+    }
+
+    // Logical match on forum + case_type + case_number + case_year (all four must be non-null and match)
+    let logicalMatches = [];
+    if (forum && case_type && case_number && case_year) {
+      logicalMatches = all(
+        `SELECT id, case_ref_no, applicant, respondent, forum, railway, present_status, next_hearing_date
+         FROM cases
+         WHERE forum = ? AND case_type = ? AND case_number = ? AND case_year = ?
+           AND forum IS NOT NULL AND case_type IS NOT NULL AND case_number IS NOT NULL AND case_year IS NOT NULL
+           ${scopeFilter}
+         ORDER BY updated_at DESC LIMIT 10`,
+        [forum, case_type, case_number, case_year, ...scopeParams]
+      );
+    }
+
+    // Filter out the exact match from logical matches to avoid double-counting
+    if (exactMatch) {
+      logicalMatches = logicalMatches.filter(m => m.id !== exactMatch.id);
+    }
+
+    res.json({
+      exactMatch,
+      logicalMatches,
+      count: (exactMatch ? 1 : 0) + logicalMatches.length,
+    });
+  } catch (err) {
+    console.error('Duplicate check error:', err);
+    res.status(500).json({ error: 'Failed to check for duplicates.' });
+  }
+};
+
 module.exports = {
   getCases, getCaseById, createCase, updateCase, deleteCase,
   updateCaseStatus, updateCaseNextHearing,
-  parseCase, parsePdfCaseFile, extractPdfText
+  parseCase, parsePdfCaseFile, extractPdfText,
+  checkDuplicate,
 };

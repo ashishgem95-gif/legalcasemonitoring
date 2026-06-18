@@ -9,9 +9,12 @@ function checkCaseAccess(caseRecord, user) {
 // GET /api/cases/:id/hearings
 const getHearingsForCase = async (req, res) => {
   try {
-    const caseRecord = get('SELECT id FROM cases WHERE id = ?', [req.params.id]);
+    const caseRecord = get('SELECT id, railway FROM cases WHERE id = ?', [req.params.id]);
     if (!caseRecord) {
       return res.status(404).json({ error: 'Case not found.' });
+    }
+    if (!checkCaseAccess(caseRecord, req.user)) {
+      return res.status(403).json({ error: 'Access denied for this case.' });
     }
     const hearings = all(
       'SELECT * FROM hearing_history WHERE case_id = ? ORDER BY hearing_date DESC, id DESC',
@@ -34,9 +37,12 @@ const addHearingToCase = async (req, res) => {
       return res.status(400).json({ error: 'hearing_date is required.' });
     }
 
-    const caseRecord = get('SELECT id FROM cases WHERE id = ?', [caseId]);
+    const caseRecord = get('SELECT id, railway FROM cases WHERE id = ?', [caseId]);
     if (!caseRecord) {
       return res.status(404).json({ error: 'Case not found.' });
+    }
+    if (!checkCaseAccess(caseRecord, req.user)) {
+      return res.status(403).json({ error: 'Access denied for this case.' });
     }
 
     let order_summary = '';

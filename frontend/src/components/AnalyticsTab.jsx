@@ -4,6 +4,7 @@ import KpiCard from './KpiCard';
 import AttentionList from './AttentionList';
 import InsightsStrip from './InsightsStrip';
 import api from '../utils/api';
+import { useTheme } from '../utils/ThemeContext';
 import { differenceInDays, startOfDay, format } from 'date-fns';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -24,20 +25,34 @@ function colorForStatus(status, idx) {
 }
 
 export default function AnalyticsTab({ refreshKey }) {
+  const { isDark } = useTheme();
+  const axisColor = isDark ? '#94A3B8' : '#4b5563';
+  const gridColor = isDark ? '#334155' : '#e5e7eb';
+  const cursorFill = isDark ? '#273449' : '#f3f4f6';
+  const primaryBar = isDark ? '#3B82F6' : '#0f2c59';
+  const secondaryBar = isDark ? '#60A5FA' : '#1e3a8a';
+  const orangeBar = isDark ? '#FBBF24' : '#ff9933';
+  const blueBar = isDark ? '#60A5FA' : '#3b82f6';
+  const greenStroke = isDark ? '#34D399' : '#059669';
+
   const [charts, setCharts] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [insights, setInsights] = useState(null);
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [range, setRange] = useState(30);
 
   useEffect(() => {
-    fetchAll();
+    let active = true;
+    fetchAll(active);
+    return () => { active = false; };
   }, [refreshKey, range]);
 
-  const fetchAll = async () => {
+  const fetchAll = async (active) => {
     setLoading(true);
+    setError(null);
     try {
       const [c, d, i, allCases] = await Promise.all([
         api.getAnalyticsCharts(range),
@@ -45,6 +60,7 @@ export default function AnalyticsTab({ refreshKey }) {
         api.getAnalyticsInsights(),
         api.getCases().catch(() => []),
       ]);
+      if (!active) return;
       setCharts(c);
       setDashboard(d);
       setInsights(i);
@@ -52,8 +68,9 @@ export default function AnalyticsTab({ refreshKey }) {
       setLastUpdated(new Date());
     } catch (err) {
       console.error('Failed to load analytics:', err);
+      if (active) setError('Failed to load analytics data. Please try refreshing.');
     } finally {
-      setLoading(false);
+      if (active) setLoading(false);
     }
   };
 
@@ -132,6 +149,15 @@ export default function AnalyticsTab({ refreshKey }) {
 
   if (loading && !charts) {
     return <div style={{ textAlign: 'center', padding: '3rem' }}><div className="spinner" /></div>;
+  }
+
+  if (error && !charts) {
+    return (
+      <div className="glass-panel" style={{ background: '#fff', border: '1px solid #fecaca', textAlign: 'center', padding: '3rem', color: '#991b1b' }}>
+        <p style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>{error}</p>
+        <button className="btn btn-primary" onClick={() => fetchAll(true)}>Retry</button>
+      </div>
+    );
   }
 
   const statusData = charts?.statusDistribution || [];
@@ -268,11 +294,11 @@ export default function AnalyticsTab({ refreshKey }) {
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={hearingsData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="week" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip cursor={{ fill: '#f3f4f6' }} />
-                <Bar dataKey="count" fill="#0f2c59" radius={[4, 4, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="week" tick={{ fontSize: 11, fill: axisColor }} />
+                <YAxis tick={{ fontSize: 11, fill: axisColor }} allowDecimals={false} />
+                <Tooltip cursor={{ fill: cursorFill }} />
+                <Bar dataKey="count" fill={primaryBar} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -281,11 +307,11 @@ export default function AnalyticsTab({ refreshKey }) {
         <ChartPanel title="Hearings by Day of Week" subtitle="All upcoming">
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={hearingsByDow}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-              <Tooltip cursor={{ fill: '#f3f4f6' }} />
-              <Bar dataKey="count" fill="#ff9933" radius={[4, 4, 0, 0]} />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: axisColor }} />
+              <YAxis tick={{ fontSize: 11, fill: axisColor }} allowDecimals={false} />
+              <Tooltip cursor={{ fill: cursorFill }} />
+              <Bar dataKey="count" fill={orangeBar} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartPanel>
@@ -311,11 +337,11 @@ export default function AnalyticsTab({ refreshKey }) {
                     <stop offset="100%" stopColor="#059669" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: axisColor }} />
+                <YAxis tick={{ fontSize: 11, fill: axisColor }} allowDecimals={false} />
                 <Tooltip />
-                <Area type="monotone" dataKey="count" stroke="#059669" strokeWidth={2} fill="url(#disposalFill)" />
+                <Area type="monotone" dataKey="count" stroke={greenStroke} strokeWidth={2} fill="url(#disposalFill)" />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -327,11 +353,11 @@ export default function AnalyticsTab({ refreshKey }) {
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={typeData} layout="vertical" margin={{ left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-                <YAxis dataKey="case_type" type="category" tick={{ fontSize: 11 }} width={90} />
-                <Tooltip cursor={{ fill: '#f3f4f6' }} />
-                <Bar dataKey="count" fill="#1e3a8a" radius={[0, 4, 4, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: axisColor }} allowDecimals={false} />
+                <YAxis dataKey="case_type" type="category" tick={{ fontSize: 11, fill: axisColor }} width={90} />
+                <Tooltip cursor={{ fill: cursorFill }} />
+                <Bar dataKey="count" fill={secondaryBar} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -345,11 +371,11 @@ export default function AnalyticsTab({ refreshKey }) {
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={forumData} layout="vertical" margin={{ left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-                <YAxis dataKey="forum" type="category" tick={{ fontSize: 10 }} width={80} />
-                <Tooltip cursor={{ fill: '#f3f4f6' }} />
-                <Bar dataKey="count" fill="#0f2c59" radius={[0, 4, 4, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: axisColor }} allowDecimals={false} />
+                <YAxis dataKey="forum" type="category" tick={{ fontSize: 10, fill: axisColor }} width={80} />
+                <Tooltip cursor={{ fill: cursorFill }} />
+                <Bar dataKey="count" fill={primaryBar} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -361,11 +387,11 @@ export default function AnalyticsTab({ refreshKey }) {
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={railwayData} layout="vertical" margin={{ left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-                <YAxis dataKey="railway" type="category" tick={{ fontSize: 10 }} width={80} />
-                <Tooltip cursor={{ fill: '#f3f4f6' }} />
-                <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: axisColor }} allowDecimals={false} />
+                <YAxis dataKey="railway" type="category" tick={{ fontSize: 10, fill: axisColor }} width={80} />
+                <Tooltip cursor={{ fill: cursorFill }} />
+                <Bar dataKey="count" fill={blueBar} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -377,11 +403,11 @@ export default function AnalyticsTab({ refreshKey }) {
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={ageData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip cursor={{ fill: '#f3f4f6' }} />
-                <Bar dataKey="count" fill="#ff9933" radius={[4, 4, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="bucket" tick={{ fontSize: 11, fill: axisColor }} />
+                <YAxis tick={{ fontSize: 11, fill: axisColor }} allowDecimals={false} />
+                <Tooltip cursor={{ fill: cursorFill }} />
+                <Bar dataKey="count" fill={orangeBar} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

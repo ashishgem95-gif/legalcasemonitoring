@@ -38,8 +38,26 @@ const STAGE_COLUMN_MAP = {
   'writ_petition_filed': { dateCol: 'writ_petition_filed_date', notesCol: 'writ_petition_filed_notes' }
 };
 
+// Returns today's date in YYYY-MM-DD format in IST (UTC+5:30), not UTC.
+// Use this instead of new Date().toISOString().split('T')[0] for any "today" comparison
+// against hearing dates, reply deadlines, or dashboard "upcoming" windows.
+function istToday() {
+  const now = new Date();
+  const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+  return ist.toISOString().split('T')[0];
+}
+
+// Returns an IST date offset by N days from today (YYYY-MM-DD).
+function istDateOffset(days) {
+  const now = new Date();
+  const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000 + days * 24 * 60 * 60 * 1000);
+  return ist.toISOString().split('T')[0];
+}
+
 module.exports = {
   DISPOSED_STATUSES,
   VALID_STAGES,
-  STAGE_COLUMN_MAP
+  STAGE_COLUMN_MAP,
+  istToday,
+  istDateOffset,
 };

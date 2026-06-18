@@ -17,7 +17,10 @@ exports.getFiles = (req, res) => {
       params.push(status);
     }
 
-    if (zonal_railway && zonal_railway !== 'All Locations') {
+    if (req._railwayScope) {
+      query += ' AND pf.zonal_railway LIKE ?';
+      params.push(`%${req._railwayScope}%`);
+    } else if (zonal_railway && zonal_railway !== 'All Locations') {
       query += ' AND pf.zonal_railway LIKE ?';
       params.push(`%${zonal_railway}%`);
     }

@@ -1,11 +1,19 @@
 const { run, get, all } = require('../config/dbHelper');
 
+function checkCaseAccess(caseRecord, user) {
+  if (!user || user.railwayScope === 'All') return true;
+  return caseRecord.railway === user.railwayScope;
+}
+
 // GET /api/cases/:id/affidavits
 const getAffidavitsForCase = async (req, res) => {
   try {
-    const caseRecord = get('SELECT id FROM cases WHERE id = ?', [req.params.id]);
+    const caseRecord = get('SELECT id, railway FROM cases WHERE id = ?', [req.params.id]);
     if (!caseRecord) {
       return res.status(404).json({ error: 'Case not found.' });
+    }
+    if (!checkCaseAccess(caseRecord, req.user)) {
+      return res.status(403).json({ error: 'Access denied for this case.' });
     }
     const affidavits = all(
       'SELECT * FROM case_affidavits WHERE case_id = ? ORDER BY filing_date DESC, id DESC',
@@ -32,9 +40,12 @@ const addAffidavitToCase = async (req, res) => {
       return res.status(400).json({ error: 'filed_by must be either "Petitioner" or "Respondent".' });
     }
 
-    const caseRecord = get('SELECT id FROM cases WHERE id = ?', [caseId]);
+    const caseRecord = get('SELECT id, railway FROM cases WHERE id = ?', [caseId]);
     if (!caseRecord) {
       return res.status(404).json({ error: 'Case not found.' });
+    }
+    if (!checkCaseAccess(caseRecord, req.user)) {
+      return res.status(403).json({ error: 'Access denied for this case.' });
     }
 
     const result = run(

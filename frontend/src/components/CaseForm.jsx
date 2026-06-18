@@ -41,6 +41,11 @@ export default function CaseForm() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Duplicate detection state
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const [duplicateHint, setDuplicateHint] = useState(null);
+  const [forceCreate, setForceCreate] = useState(false);
+
   const [formData, setFormData] = useState({
     case_type: '',
     case_number: '',
@@ -288,11 +293,24 @@ export default function CaseForm() {
       setError(null);
 
       const dataToSubmit = { ...formData };
-      
+
       if (isEditMode) {
         await api.updateCase(id, dataToSubmit);
         navigate(`/cases/${id}`);
       } else {
+        // Duplicate pre-check (unless user already acknowledged and is forcing create)
+        if (!forceCreate) {
+          try {
+            const dup = await api.checkCaseDuplicate(dataToSubmit);
+            if (dup && dup.count > 0) {
+              setDuplicateWarning(dup);
+              setLoading(false);
+              return;
+            }
+          } catch (dupErr) {
+            console.error('Duplicate check failed (non-blocking):', dupErr);
+          }
+        }
         const newCase = await api.createCase(dataToSubmit);
         navigate(`/cases/${newCase.id}`);
       }
@@ -336,6 +354,52 @@ export default function CaseForm() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
           </svg>
           {error}
+        </div>
+      )}
+
+      {duplicateWarning && duplicateWarning.count > 0 && (
+        <div className="alert-banner" style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            Possible duplicate case detected ({duplicateWarning.count} match{duplicateWarning.count > 1 ? 'es' : ''})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {duplicateWarning.exactMatch && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                <strong style={{ color: '#991b1b' }}>Exact ref match:</strong>
+                <span>{duplicateWarning.exactMatch.case_ref_no}</span>
+                <span style={{ color: '#6b7280' }}>— {duplicateWarning.exactMatch.applicant || 'Unknown'} vs {duplicateWarning.exactMatch.respondent || 'Unknown'}</span>
+                <button type="button" className="btn btn-secondary" style={{ padding: '0.15rem 0.5rem', fontSize: '0.72rem' }} onClick={() => navigate(`/cases/${duplicateWarning.exactMatch.id}`)}>View</button>
+              </div>
+            )}
+            {duplicateWarning.logicalMatches.map((m, i) => (
+              <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                <strong style={{ color: '#92400e' }}>Similar:</strong>
+                <span>{m.case_ref_no}</span>
+                <span style={{ color: '#6b7280' }}>— {m.forum} {m.case_type} ({m.applicant || 'Unknown'})</span>
+                <button type="button" className="btn btn-secondary" style={{ padding: '0.15rem 0.5rem', fontSize: '0.72rem' }} onClick={() => navigate(`/cases/${m.id}`)}>View</button>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ background: '#92400e', borderColor: '#92400e' }}
+              onClick={() => { setForceCreate(true); setDuplicateWarning(null); }}
+            >
+              Create anyway
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setDuplicateWarning(null)}
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 

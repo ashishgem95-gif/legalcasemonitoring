@@ -390,6 +390,29 @@
 [data-theme="dark"] [style*="color:#92400e"] {
   color: #FBBF24 !important;
 }
+/* #111827 — the most-used inline text color, invisible on dark cards without this */
+[data-theme="dark"] [style*="color: #111827"],
+[data-theme="dark"] [style*="color:#111827"] {
+  color: var(--text-primary) !important;
+}
+
+/* ============ Catch-all for inline-styled light backgrounds in dark mode ============ */
+/* Tinted/light background divs (used in CaseDetail metadata, CaseForm inputs, etc.)
+   render as light patches on dark cards. Override to use the dark card background. */
+[data-theme="dark"] [style*="background: #f9fafb"],
+[data-theme="dark"] [style*="background:#f9fafb"],
+[data-theme="dark"] [style*="background: #fffaf5"],
+[data-theme="dark"] [style*="background:#fffaf5"],
+[data-theme="dark"] [style*="background: #f0fdf4"],
+[data-theme="dark"] [style*="background:#f0fdf4"],
+[data-theme="dark"] [style*="background: #f3f4f6"],
+[data-theme="dark"] [style*="background:#f3f4f6"],
+[data-theme="dark"] [style*="background: #FFF7ED"],
+[data-theme="dark"] [style*="background:#FFF7ED"],
+[data-theme="dark"] [style*="background: #f1f5f9"],
+[data-theme="dark"] [style*="background:#f1f5f9"] {
+  background: var(--card-hover-bg) !important;
+}
 
 /* ============ Hearing timeline order-uploaded toggle ============ */
 .hearing-timeline-item {

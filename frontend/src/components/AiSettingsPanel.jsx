@@ -101,7 +101,7 @@ export default function AiSettingsPanel() {
   };
 
   return (
-    <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.75rem 1rem', background: '#f9fafb', marginBottom: '1.25rem' }}>
+    <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.75rem 1rem', background: 'var(--bg-secondary)', marginBottom: '1.25rem' }}>
       <div 
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
         onClick={() => setIsOpen(!isOpen)}
@@ -111,30 +111,30 @@ export default function AiSettingsPanel() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <strong style={{ fontSize: '0.85rem', color: '#111827', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             एआई मॉडल एवं कुंजी सेटिंग्स / AI Model & API Configuration
           </strong>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.75rem', background: '#e5e7eb', color: '#374151', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.75rem', background: 'var(--bg-primary)', color: 'var(--text-secondary)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 600 }}>
             {provider.toUpperCase()}: {model || 'Default'}
           </span>
-          <span style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', color: '#4b5563', fontWeight: 'bold' }}>
+          <span style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', color: 'var(--text-secondary)', fontWeight: 'bold' }}>
             ▼
           </span>
         </div>
       </div>
 
       {isOpen && (
-        <div style={{ marginTop: '1rem', borderTop: '1px solid #e5e7eb', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             
             {/* AI Provider */}
             <div className="form-group">
-              <label className="form-label" style={{ color: '#4b5563', fontSize: '0.75rem' }}>AI Provider / प्रदाता</label>
+              <label className="form-label" style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>AI Provider / प्रदाता</label>
               <select
                 className="select-input"
-                style={{ width: '100%', height: '38px', background: '#fff', borderColor: '#d1d5db', color: '#111827', padding: '0.4rem 0.75rem' }}
+                style={{ width: '100%', height: '38px', background: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-primary)', padding: '0.4rem 0.75rem' }}
                 value={provider}
                 onChange={handleProviderChange}
               >
@@ -147,11 +147,11 @@ export default function AiSettingsPanel() {
 
             {/* AI Model */}
             <div className="form-group">
-              <label className="form-label" style={{ color: '#4b5563', fontSize: '0.75rem' }}>AI Model / मॉडल</label>
+              <label className="form-label" style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>AI Model / मॉडल</label>
               {!isCustomModel ? (
                 <select
                   className="select-input"
-                  style={{ width: '100%', height: '38px', background: '#fff', borderColor: '#d1d5db', color: '#111827', padding: '0.4rem 0.75rem' }}
+                  style={{ width: '100%', height: '38px', background: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-primary)', padding: '0.4rem 0.75rem' }}
                   value={model}
                   onChange={handleModelChange}
                 >
@@ -165,7 +165,7 @@ export default function AiSettingsPanel() {
                   <input
                     type="text"
                     className="form-control"
-                    style={{ flex: 1, height: '38px', background: '#fff', borderColor: '#d1d5db', color: '#111827', padding: '0.4rem 0.75rem' }}
+                    style={{ flex: 1, height: '38px', background: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-primary)', padding: '0.4rem 0.75rem' }}
                     placeholder="Enter custom model string..."
                     value={model}
                     onChange={handleCustomModelChange}
@@ -191,14 +191,14 @@ export default function AiSettingsPanel() {
 
           {/* API Key */}
           <div className="form-group">
-            <label className="form-label" style={{ color: '#4b5563', fontSize: '0.75rem' }}>
+            <label className="form-label" style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
               API Key / एपीआई कुंजी
             </label>
             <div style={{ position: 'relative' }}>
               <input
                 type={showKey ? 'text' : 'password'}
                 className="form-control"
-                style={{ width: '100%', paddingRight: '2.5rem', background: '#fff', borderColor: '#d1d5db', color: '#111827', height: '38px' }}
+                style={{ width: '100%', paddingRight: '2.5rem', background: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-primary)', height: '38px' }}
                 placeholder={`Enter your private ${provider.toUpperCase()} API Key (saved locally in your browser)`}
                 value={apiKey}
                 onChange={handleKeyChange}
@@ -212,7 +212,7 @@ export default function AiSettingsPanel() {
                   transform: 'translateY(-50%)',
                   background: 'none',
                   border: 'none',
-                  color: '#4b5563',
+                  color: 'var(--text-secondary)',
                   cursor: 'pointer',
                   fontWeight: 600,
                   fontSize: '0.8rem'
@@ -222,7 +222,7 @@ export default function AiSettingsPanel() {
                 {showKey ? 'HIDE' : 'SHOW'}
               </button>
             </div>
-            <span style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '0.15rem' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
               ⚠️ Your key is saved locally in your browser's LocalStorage. It is sent as a secure header only to your backend server.
             </span>
           </div>

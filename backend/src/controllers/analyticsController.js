@@ -1,4 +1,5 @@
 const { get, all } = require('../config/dbHelper');
+const { istToday, istDateOffset } = require('../config/constants');
 
 // GET /api/analytics/dashboard
 exports.getDashboard = (req, res) => {
@@ -11,8 +12,8 @@ exports.getDashboard = (req, res) => {
     const disposed = get(`SELECT COUNT(*) as c FROM cases WHERE present_status = 'Disposed' ${scopeFilter}`, scopeParams).c;
     const pendingReplies = get(`SELECT COUNT(*) as c FROM cases WHERE last_date_reply IS NOT NULL AND date_filing_reply IS NULL ${scopeFilter}`, scopeParams).c;
 
-    const today = new Date().toISOString().split('T')[0];
-    const weekEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const today = istToday();
+    const weekEnd = istDateOffset(7);
     const upcomingHearings = get(
       `SELECT COUNT(*) as c FROM cases
        WHERE next_hearing_date BETWEEN ? AND ?
