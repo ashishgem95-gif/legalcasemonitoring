@@ -11,7 +11,11 @@ const getCases = async (req, res) => {
     const { search, status, case_type, railway } = req.query;
     let query = `
       SELECT c.*,
-             COALESCE(c.next_hearing_date, lh.last_hearing_date) AS next_hearing_date,
+             CASE
+               WHEN c.next_hearing_date IS NOT NULL AND lh.last_hearing_date IS NOT NULL
+                 THEN MAX(c.next_hearing_date, lh.last_hearing_date)
+               ELSE COALESCE(c.next_hearing_date, lh.last_hearing_date)
+             END AS next_hearing_date,
              lh.last_hearing_date AS last_hearing_date,
              lh.last_hearing_order AS last_hearing_order,
              lh.last_hearing_uploaded AS last_hearing_order_uploaded,

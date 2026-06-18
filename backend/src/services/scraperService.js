@@ -141,7 +141,7 @@ function fallbackParseCourtUpdate(caseRecord, text) {
     }
   }
 
-  let order_date = new Date().toISOString().split('T')[0];
+  let order_date = null;
   const orderDatePatterns = [
     /order\s+dated\s*[:\-]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i,
     /passed\s+on\s*[:\-]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i,
@@ -169,11 +169,13 @@ function fallbackParseCourtUpdate(caseRecord, text) {
   else if (/cat\s+order|court\s+order|cat_court_order/i.test(cleanText)) progression_stage = 'cat_court_order';
   else if (/writ\s+petition|writ_petition/i.test(cleanText)) progression_stage = 'writ_petition_filed';
 
+  const nothingExtracted = !order_date && !next_hearing_date && !case_status && !progression_stage;
+
   return {
-    order_found: true,
+    order_found: !nothingExtracted,
     order_date,
-    order_summary: "Automated alert: updates detected on court link page.",
-    order_raw_text: cleanText.substring(0, 500) + '...',
+    order_summary: nothingExtracted ? null : "Automated alert: updates detected on court link page.",
+    order_raw_text: nothingExtracted ? null : (cleanText.substring(0, 500) + '...'),
     next_hearing_date,
     progression_stage,
     case_status
@@ -318,7 +320,7 @@ async function checkCaseLinks(headers = {}, dueOnly = false) {
 
           if (parsed.progression_stage && STAGE_COLUMN_MAP[parsed.progression_stage]) {
             const cols = STAGE_COLUMN_MAP[parsed.progression_stage];
-            const stageDate = parsed.order_date || new Date().toISOString().split('T')[0];
+            const stageDate = parsed.order_date || parsed.next_hearing_date || new Date().toISOString().split('T')[0];
             db.prepare(`UPDATE cases SET ${cols.dateCol} = ?, ${cols.notesCol} = ?, updated_at = CURRENT_TIMESTAMP
               WHERE id = ? AND ${cols.dateCol} IS NULL`)
               .run(stageDate, parsed.order_summary, c.id);

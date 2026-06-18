@@ -109,7 +109,11 @@ async function scrapeCaseDetail(page, caseRecord) {
     // Step 3: Try to get daily orders via additional_mis.php
     if (metadata.diaryNo) {
       try {
-        const diaryParam = metadata.detailParam?.split('/').slice(0, 2).join('/');
+        const decoded = Buffer.from(metadata.detailParam, 'base64').toString('utf-8');
+        const parts = decoded.split('/');
+        if (parts.length < 2) throw new Error('Invalid detail param format');
+        const diaryNo = parts.slice(0, 2).join('/');
+        const diaryParam = Buffer.from(diaryNo).toString('base64');
         if (diaryParam) {
           const dailyUrl = `https://cis.cgat.gov.in/catlive/additional_mis.php?diary_no=${diaryParam}`;
           await page.goto(dailyUrl, { waitUntil: 'networkidle', timeout: PAGE_TIMEOUT });
