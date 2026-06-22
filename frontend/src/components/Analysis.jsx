@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import KanbanTab from './KanbanTab';
 import CalendarTab from './CalendarTab';
 import AnalyticsTab from './AnalyticsTab';
+import ReportsTab from './ReportsTab';
+import SyncButton from './SyncButton';
+import ExcelImportTab from './ExcelImportTab';
 import './Dashboard.css';
 
 export default function Analysis() {
@@ -14,6 +17,8 @@ export default function Analysis() {
     { id: 'kanban', label: '📋 Kanban' },
     { id: 'calendar', label: '📅 Calendar' },
     { id: 'analytics', label: '📊 Analytics' },
+    { id: 'reports', label: '📄 Reports' },
+    { id: 'excel', label: '📥 Excel Import' },
   ];
 
   return (
@@ -34,11 +39,14 @@ export default function Analysis() {
           </svg>
           Refresh
         </button>
+        <SyncButton onSyncComplete={handleRefresh} />
       </div>
 
       {activeTab === 'kanban' && <KanbanTab refreshKey={refreshKey} />}
       {activeTab === 'calendar' && <CalendarTab refreshKey={refreshKey} />}
       {activeTab === 'analytics' && <AnalyticsTab refreshKey={refreshKey} />}
+      {activeTab === 'reports' && <ReportsTab />}
+      {activeTab === 'excel' && <ExcelImportTab />}
     </div>
   );
 }

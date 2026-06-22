@@ -2,6 +2,7 @@ const { runBatchSync } = require('../services/batchSyncService');
 const { runPlaywrightSync } = require('../services/playwrightScraper');
 const { runOrderSync } = require('../services/orderScraper');
 const { runSmartSync } = require('../services/smartSync');
+const { runHcSync } = require('../services/hcScraperService');
 const { logger } = require('../config/logger');
 
 let syncState = {
@@ -159,5 +160,80 @@ exports.resyncSingleCase = async (req, res) => {
   } catch (err) {
     logger.error({ caseId, error: err.message }, 'Re-sync failed');
     res.status(500).json({ error: 'Re-sync failed: ' + err.message });
+  }
+};
+
+// POST /api/sync/hc — HC/SC Playwright scraper
+exports.triggerHcSync = async (req, res) => {
+  if (syncState.running) {
+    return res.status(409).json({ error: 'A sync is already running', type: syncState.type });
+  }
+
+  const { limit = 0, forum = null } = req.body || {};
+
+  syncState = { running: true, type: 'hc', startedAt: new Date().toISOString(), completedAt: null, summary: null };
+
+  res.json({
+    status: 'started',
+    message: 'HC/SC Playwright sync initiated. Scraping High Court and Supreme Court case status pages.',
+    startedAt: syncState.startedAt,
+  });
+
+  try {
+    const result = await runHcSync({ limit, forum });
+    syncState.running = false;
+    syncState.completedAt = new Date().toISOString();
+    syncState.summary = result;
+    logger.info(result, 'HC sync completed');
+  } catch (err) {
+    syncState.running = false;
+    syncState.summary = { error: err.message };
+    logger.error({ err }, 'HC sync failed');
+  }
+};
+
+// POST /api/sync/full — Run CAT smart sync + HC Playwright sync in sequence
+exports.triggerFullSync = async (req, res) => {
+  if (syncState.running) {
+    return res.status(409).json({ error: 'A sync is already running', type: syncState.type });
+  }
+
+  syncState = { running: true, type: 'full', startedAt: new Date().toISOString(), completedAt: null, summary: null, progress: { phase: 'cat', detail: null } };
+
+  res.json({
+    status: 'started',
+    message: 'Full sync initiated. Phase 1: CAT smart sync. Phase 2: HC/SC Playwright sync.',
+    startedAt: syncState.startedAt,
+  });
+
+  try {
+    const catResult = await runSmartSync();
+    syncState.progress = { phase: 'hc', detail: { catUpdated: catResult.updated.length, catErrors: catResult.errors.length } };
+
+    const hcResult = await runHcSync({});
+
+    syncState.running = false;
+    syncState.completedAt = new Date().toISOString();
+    syncState.summary = {
+      cat: {
+        updated: catResult.updated.length,
+        unchanged: catResult.pending.length,
+        errors: catResult.errors.length,
+        total: catResult.total,
+      },
+      hc: {
+        updated: hcResult.updated,
+        captcha: hcResult.captcha,
+        notFound: hcResult.notFound,
+        noData: hcResult.noData,
+        errors: hcResult.errors,
+        total: hcResult.total,
+      },
+    };
+    logger.info(syncState.summary, 'Full sync completed');
+  } catch (err) {
+    syncState.running = false;
+    syncState.summary = { error: err.message };
+    logger.error({ err }, 'Full sync failed');
   }
 };

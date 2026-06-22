@@ -111,6 +111,14 @@ const server = app.listen(PORT, () => {
     checkReminders();
     setInterval(checkReminders, 4 * 60 * 60 * 1000);
   } catch (e) { logger.error({ err: e }, 'Failed to init email scheduler'); }
+
+  // Excel import on startup (non-blocking)
+  try {
+    const excelImportController = require('./controllers/excelImportController');
+    setTimeout(() => {
+      excelImportController.runStartupImport().catch(err => logger.error({ err }, 'Excel startup import failed'));
+    }, 8000);
+  } catch (e) { logger.error({ err: e }, 'Failed to init Excel import'); }
 });
 
 server.on('error', (err) => {

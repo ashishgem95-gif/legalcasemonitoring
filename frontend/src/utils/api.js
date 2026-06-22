@@ -1,4 +1,4 @@
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:5000/api`;
+const API_BASE_URL = `${window.location.origin}/api`;
 
 function getAuthToken() {
   return localStorage.getItem('ccms_token');
@@ -222,14 +222,65 @@ export const api = {
   triggerCrawl: () => requestWithAi('/cases/trigger-crawl', { method: 'POST' }),
   checkDueCases: () => requestWithAi('/cases/check-due-cases', { method: 'POST' }),
   smartSync: () => requestWithAi('/sync/smart', { method: 'POST' }),
+  hcSync: () => request('/sync/hc', { method: 'POST', body: {} }),
+  fullSync: () => request('/sync/full', { method: 'POST', body: {} }),
+  getSyncStatus: () => request('/sync/status'),
   resyncCase: (caseId) => request(`/sync/case/${caseId}`, { method: 'POST' }),
 
   getAnalyticsCharts: (range = 30) => request(`/analytics/charts?range=${encodeURIComponent(range)}`),
   getAnalyticsDashboard: () => request('/analytics/dashboard'),
   getAnalyticsInsights: () => request('/analytics/insights'),
 
+  // Reports
+  getReportColumnCatalog: () => request('/reports/column-catalog'),
+  getReportFilterOptions: () => request('/reports/filter-options'),
+  generateZoneReport: async (config) => {
+    const token = getAuthToken();
+    const url = `${API_BASE_URL}/reports/zone-excel`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(config),
+    });
+    if (response.status === 401) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('ccms_token');
+      window.location.reload();
+      throw new Error('Session expired');
+    }
+    if (!response.ok) {
+      let msg = `Report generation failed (${response.status})`;
+      try {
+        const errData = await response.json();
+        if (errData?.error) msg = errData.error;
+      } catch { /* ignore */ }
+      throw new Error(msg);
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename = match ? match[1] : `zone_report_${Date.now()}.xlsx`;
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(objUrl);
+    return { filename, ok: true };
+  },
+
   getFileActivity: () => request('/admin/file-activity'),
   markAlertsSeen: () => request('/admin/file-activity/seen', { method: 'POST' }),
+
+  // Excel Import
+  getExcelFileInfo: () => request('/excel-import/file-info'),
+  checkExcelImport: () => request('/excel-import/check', { method: 'POST' }),
+  getExcelImportHistory: (limit = 20) => request(`/excel-import/history?limit=${limit}`),
 };
 
 export default api;

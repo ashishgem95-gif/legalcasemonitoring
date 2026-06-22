@@ -449,6 +449,23 @@ db.exec(`
 `);
 console.log('ai_settings table verified/created.');
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS excel_import_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    triggered_by VARCHAR DEFAULT 'manual',
+    new_cases INTEGER DEFAULT 0,
+    updated_cases INTEGER DEFAULT 0,
+    skipped_cases INTEGER DEFAULT 0,
+    errors INTEGER DEFAULT 0,
+    total_rows INTEGER DEFAULT 0,
+    details TEXT,
+    file_name VARCHAR,
+    file_modified_at TIMESTAMP
+  );
+`);
+console.log('excel_import_log table verified/created.');
+
 db.exec(`CREATE INDEX IF NOT EXISTS idx_cases_railway ON cases(railway);`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_case_alerts_is_read ON case_alerts(is_read);`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_case_alerts_case_id ON case_alerts(case_id);`);

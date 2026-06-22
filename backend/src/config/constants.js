@@ -8,6 +8,11 @@ const DISPOSED_STATUSES = [
   'Not Interested'
 ];
 
+const FROZEN_STATUSES = [
+  'Sine Die',
+  'Stay Granted',
+];
+
 const VALID_STAGES = [
   'charge_sheet_issued',
   'reply_to_charges',
@@ -56,6 +61,7 @@ function istDateOffset(days) {
 
 module.exports = {
   DISPOSED_STATUSES,
+  FROZEN_STATUSES,
   VALID_STAGES,
   STAGE_COLUMN_MAP,
   istToday,

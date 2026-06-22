@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import ChartPanel from './ChartPanel';
 import KpiCard from './KpiCard';
 import AttentionList from './AttentionList';
-import InsightsStrip from './InsightsStrip';
 import api from '../utils/api';
 import { useTheme } from '../utils/ThemeContext';
 import { differenceInDays, startOfDay, format } from 'date-fns';
@@ -32,6 +31,12 @@ const STATUS_COLORS_DARK = {
 const FALLBACK_LIGHT = ['#0f2c59', '#1e40af', '#0f2c59', '#1e40af', '#1e40af', '#d97706', '#ef4444'];
 const FALLBACK_DARK = ['#3B82F6', '#60A5FA', '#3B82F6', '#60A5FA', '#60A5FA', '#FBBF24', '#F87171'];
 
+const ATTENTION_TABS = [
+  { key: 'overdue', label: 'Overdue Hearings', icon: '⚠' },
+  { key: 'upcoming', label: 'Upcoming (7 days)', icon: '◴' },
+  { key: 'replies', label: 'Overdue Replies', icon: '✎' },
+];
+
 export default function AnalyticsTab({ refreshKey }) {
   const { isDark } = useTheme();
   const statusColors = isDark ? STATUS_COLORS_DARK : STATUS_COLORS_LIGHT;
@@ -40,10 +45,8 @@ export default function AnalyticsTab({ refreshKey }) {
   const axisColor = isDark ? '#94A3B8' : '#4b5563';
   const gridColor = isDark ? '#334155' : '#e5e7eb';
   const cursorFill = isDark ? '#273449' : '#f9fafb';
-  const primaryBar = isDark ? '#3B82F6' : '#0f2c59';
   const secondaryBar = isDark ? '#60A5FA' : '#1e40af';
   const orangeBar = isDark ? '#FBBF24' : '#ff9933';
-  const blueBar = isDark ? '#60A5FA' : '#0f2c59';
   const greenStroke = isDark ? '#34D399' : '#10b981';
   const areaGradient = isDark ? '#34D399' : '#059669';
 
@@ -55,12 +58,8 @@ export default function AnalyticsTab({ refreshKey }) {
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [range, setRange] = useState(30);
-
-  useEffect(() => {
-    let active = true;
-    fetchAll(active);
-    return () => { active = false; };
-  }, [refreshKey, range]);
+  const [attnTab, setAttnTab] = useState('overdue');
+  const [breakdown, setBreakdown] = useState('forum');
 
   const fetchAll = async (active) => {
     setLoading(true);
@@ -85,6 +84,12 @@ export default function AnalyticsTab({ refreshKey }) {
       if (active) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let active = true;
+    fetchAll(active);
+    return () => { active = false; };
+  }, [refreshKey, range]);
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
@@ -118,19 +123,6 @@ export default function AnalyticsTab({ refreshKey }) {
     return (insights?.agingReplies || []).slice(0, 8);
   }, [insights]);
 
-  const hearingsByDow = useMemo(() => {
-    const buckets = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const counts = new Array(7).fill(0);
-    cases.forEach(c => {
-      if (!c.next_hearing_date) return;
-      try {
-        const d = new Date(c.next_hearing_date);
-        counts[d.getDay()] += 1;
-      } catch {}
-    });
-    return buckets.map((day, i) => ({ day, count: counts[i] }));
-  }, [cases]);
-
   const ageData = useMemo(() => {
     if (!dashboard?.ageDistribution) return [];
     const order = ['30d', '90d', '180d', '1yr', '1yr+'];
@@ -149,15 +141,88 @@ export default function AnalyticsTab({ refreshKey }) {
     return t > 0 ? Math.round((dashboard.disposed / t) * 100) : 0;
   }, [dashboard]);
 
-  const totalTrend = useMemo(() => {
-    if (!dashboard?.monthlyTrend) return null;
-    const arr = dashboard.monthlyTrend;
+  const disposalTrendDir = useMemo(() => {
+    const arr = charts?.disposalsTrend || [];
     if (arr.length < 2) return null;
     const last = arr[arr.length - 1].count;
     const prev = arr[arr.length - 2].count;
-    if (prev === 0) return null;
-    return Math.round(((last - prev) / prev) * 100);
-  }, [dashboard]);
+    if (prev === 0 && last === 0) return null;
+    if (prev === 0) return 'up';
+    const pct = ((last - prev) / prev) * 100;
+    if (pct > 5) return 'up';
+    if (pct < -5) return 'down';
+    return 'flat';
+  }, [charts]);
+
+  const breakdownData = useMemo(() => {
+    const opts = {
+      forum: { data: (dashboard?.byForum || []).slice(0, 8), key: 'forum', label: 'Forum' },
+      type: { data: (dashboard?.byType || []).slice(0, 8), key: 'case_type', label: 'Case Type' },
+      railway: { data: (charts?.casesByRailway || []).slice(0, 8), key: 'railway', label: 'Railway' },
+    };
+    return opts[breakdown];
+  }, [breakdown, dashboard, charts]);
+
+  const summary = useMemo(() => {
+    if (!dashboard) return null;
+    const total = dashboard.total || 0;
+    const active = dashboard.active || 0;
+    const disposed = dashboard.disposed || 0;
+    const overdue = overdueCases.length;
+    const replies = insights?.agingRepliesCount || 0;
+    const upcoming = dashboard.upcomingHearings || 0;
+    const topForum = insights?.forumPending?.[0];
+    const avgDays = insights?.avgDisposalDays;
+
+    const parts = [];
+    parts.push(
+      <span key="s1">
+        You have <b>{total}</b> cases — <b>{active}</b> active and <b>{disposed}</b> disposed
+        {disposalRate > 0 ? <> ({disposalRate}% disposal rate)</> : null}.
+      </span>
+    );
+
+    const urgent = [];
+    if (overdue > 0) urgent.push(<b key="o">{overdue} hearings are overdue</b>);
+    if (replies > 0) urgent.push(<b key="r">{replies} {replies === 1 ? 'reply needs filing' : 'replies need filing'}</b>);
+    if (urgent.length > 0) {
+      parts.push(<span key="s2"> {urgent.reduce((acc, el, i) => i === 0 ? [el] : [...acc, ' and ', el], [])}. These need immediate attention.</span>);
+    } else if (upcoming > 0) {
+      parts.push(<span key="s2"> No overdue items — <b>{upcoming}</b> {upcoming === 1 ? 'hearing is' : 'hearings are'} coming up this week.</span>);
+    } else {
+      parts.push(<span key="s2"> No overdue or upcoming hearings — everything is on track.</span>);
+    }
+
+    if (topForum && topForum.pending > 0) {
+      parts.push(
+        <span key="s3"> Heaviest pending workload is at <b>{topForum.forum}</b> ({topForum.pending} pending).</span>
+      );
+    }
+    if (avgDays != null && avgDays > 0) {
+      parts.push(
+        <span key="s4"> On average, disposed cases took <b>{avgDays} days</b> to resolve.</span>
+      );
+    }
+    if (disposalTrendDir === 'up') {
+      parts.push(<span key="s5"> Disposals are trending <b style={{ color: 'var(--status-disposed)' }}>up</b> over the last year.</span>);
+    } else if (disposalTrendDir === 'down') {
+      parts.push(<span key="s5"> Disposals are trending <b style={{ color: 'var(--red)' }}>down</b> over the last year.</span>);
+    }
+
+    return parts;
+  }, [dashboard, insights, overdueCases.length, disposalRate, disposalTrendDir]);
+
+  const attnCounts = useMemo(() => ({
+    overdue: overdueCases.length,
+    upcoming: upcomingSoon.length,
+    replies: overdueReplies.length,
+  }), [overdueCases.length, upcomingSoon.length, overdueReplies.length]);
+
+  const activeAttnItems = useMemo(() => {
+    if (attnTab === 'overdue') return { items: overdueCases, kind: 'overdue', empty: 'No overdue hearings 🎉' };
+    if (attnTab === 'upcoming') return { items: upcomingSoon, kind: 'upcoming', empty: 'Nothing in the next 7 days' };
+    return { items: overdueReplies, kind: 'replies', empty: 'No overdue replies 🎉' };
+  }, [attnTab, overdueCases, upcomingSoon, overdueReplies]);
 
   if (loading && !charts) {
     return <div style={{ textAlign: 'center', padding: '3rem' }}><div className="spinner" /></div>;
@@ -173,12 +238,9 @@ export default function AnalyticsTab({ refreshKey }) {
   }
 
   const statusData = charts?.statusDistribution || [];
-  const hearingsData = (charts?.hearingsPerWeek || []).slice(-8);
   const disposalData = charts?.disposalsTrend || [];
-  const railwayData = (charts?.casesByRailway || []).slice(0, 8);
-  const forumData = (dashboard?.byForum || []).slice(0, 8);
-  const typeData = (dashboard?.byType || []).slice(0, 8);
   const totalCases = dashboard?.total || 0;
+  const urgentTotal = attnCounts.overdue + attnCounts.replies;
 
   return (
     <div className="analytics-page">
@@ -205,12 +267,18 @@ export default function AnalyticsTab({ refreshKey }) {
         </div>
       </div>
 
-      <div className="kpi-row">
+      {summary && (
+        <div className="analytics-summary">
+          <span className="analytics-summary-icon">💡</span>
+          <p className="analytics-summary-text">{summary}</p>
+        </div>
+      )}
+
+      <div className="kpi-row kpi-row-4">
         <KpiCard
           label="Total Cases"
           value={totalCases}
           sub={dashboard ? `${dashboard.active || 0} active · ${dashboard.disposed || 0} disposed` : ''}
-          trend={totalTrend}
           tone="navy"
           icon="⚖"
           loading={loading}
@@ -218,8 +286,8 @@ export default function AnalyticsTab({ refreshKey }) {
         <KpiCard
           label="Active (Pending)"
           value={dashboard?.active ?? '—'}
-          sub={`${overdueCases.length} overdue hearings`}
-          tone={overdueCases.length > 0 ? 'warning' : 'navy'}
+          sub={`${attnCounts.overdue} overdue hearings`}
+          tone={attnCounts.overdue > 0 ? 'warning' : 'navy'}
           icon="◷"
           loading={loading}
         />
@@ -239,23 +307,36 @@ export default function AnalyticsTab({ refreshKey }) {
           icon="▦"
           loading={loading}
         />
-        <KpiCard
-          label="Pending Replies"
-          value={dashboard?.pendingReplies ?? '—'}
-          sub={insights?.agingRepliesCount ? `${insights.agingRepliesCount} overdue filings` : 'On track'}
-          tone={insights?.agingRepliesCount > 0 ? 'danger' : 'success'}
-          icon="✎"
-          loading={loading}
+      </div>
+
+      <div className="attention-tabbed">
+        <div className="attention-tabs">
+          {ATTENTION_TABS.map(t => (
+            <button
+              key={t.key}
+              type="button"
+              className={`attention-tab ${attnTab === t.key ? 'active' : ''}`}
+              onClick={() => setAttnTab(t.key)}
+            >
+              <span className="attention-tab-icon">{t.icon}</span>
+              <span className="attention-tab-label">{t.label}</span>
+              {attnCounts[t.key] > 0 && (
+                <span className={`attention-tab-badge ${t.key === 'overdue' || t.key === 'replies' ? 'urgent' : ''}`}>
+                  {attnCounts[t.key]}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        <AttentionList
+          title=""
+          items={activeAttnItems.items}
+          emptyText={activeAttnItems.empty}
+          kind={activeAttnItems.kind}
         />
       </div>
 
       <div className="analytics-row two-col">
-        <AttentionList
-          title="Overdue Hearings"
-          items={overdueCases}
-          emptyText="No overdue hearings 🎉"
-          kind="overdue"
-        />
         <ChartPanel title="Case Status" subtitle={`${totalCases} total cases`}>
           {statusData.length === 0 ? (
             <EmptyChart text="No status data" />
@@ -297,47 +378,26 @@ export default function AnalyticsTab({ refreshKey }) {
             </div>
           )}
         </ChartPanel>
-      </div>
 
-      <div className="analytics-row three-col">
-        <ChartPanel title="Hearings by Week" subtitle="Last 8 weeks">
-          {hearingsData.length === 0 ? (
-            <EmptyChart text="No hearings recorded in range" />
+        <ChartPanel title="Case Age" subtitle="How old are your cases?">
+          {ageData.length === 0 ? (
+            <EmptyChart text="No age data" />
           ) : (
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={hearingsData}>
+              <BarChart data={ageData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="week" tick={{ fontSize: 11, fill: axisColor }} />
+                <XAxis dataKey="bucket" tick={{ fontSize: 11, fill: axisColor }} />
                 <YAxis tick={{ fontSize: 11, fill: axisColor }} allowDecimals={false} />
                 <Tooltip cursor={{ fill: cursorFill }} />
-                <Bar dataKey="count" fill={primaryBar} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill={orangeBar} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
         </ChartPanel>
-
-        <ChartPanel title="Hearings by Day of Week" subtitle="All upcoming">
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={hearingsByDow}>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-              <XAxis dataKey="day" tick={{ fontSize: 11, fill: axisColor }} />
-              <YAxis tick={{ fontSize: 11, fill: axisColor }} allowDecimals={false} />
-              <Tooltip cursor={{ fill: cursorFill }} />
-              <Bar dataKey="count" fill={orangeBar} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>
-
-        <AttentionList
-          title="Upcoming This Week"
-          items={upcomingSoon}
-          emptyText="Nothing in the next 7 days"
-          kind="upcoming"
-        />
       </div>
 
       <div className="analytics-row two-col">
-        <ChartPanel title="Disposals Trend" subtitle="Last 12 months">
+        <ChartPanel title="Disposals Trend" subtitle="Resolved cases · last 12 months">
           {disposalData.length === 0 ? (
             <EmptyChart text="No disposals recorded in the last 12 months" />
           ) : (
@@ -359,15 +419,32 @@ export default function AnalyticsTab({ refreshKey }) {
           )}
         </ChartPanel>
 
-        <ChartPanel title="Cases by Case Type" subtitle="Top categories">
-          {typeData.length === 0 ? (
-            <EmptyChart text="No case type data" />
+        <ChartPanel
+          title={`Cases by ${breakdownData.label}`}
+          subtitle="Top 8 categories"
+          action={
+            <div className="breakdown-toggle">
+              {['forum', 'type', 'railway'].map(b => (
+                <button
+                  key={b}
+                  type="button"
+                  className={`breakdown-toggle-btn ${breakdown === b ? 'active' : ''}`}
+                  onClick={() => setBreakdown(b)}
+                >
+                  {b === 'forum' ? 'Forum' : b === 'type' ? 'Type' : 'Railway'}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          {breakdownData.data.length === 0 ? (
+            <EmptyChart text={`No ${breakdownData.label.toLowerCase()} data`} />
           ) : (
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={typeData} layout="vertical" margin={{ left: 10 }}>
+              <BarChart data={breakdownData.data} layout="vertical" margin={{ left: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: axisColor }} allowDecimals={false} />
-                <YAxis dataKey="case_type" type="category" tick={{ fontSize: 11, fill: axisColor }} width={90} />
+                <YAxis dataKey={breakdownData.key} type="category" tick={{ fontSize: 10, fill: axisColor }} width={90} />
                 <Tooltip cursor={{ fill: cursorFill }} />
                 <Bar dataKey="count" fill={secondaryBar} radius={[0, 4, 4, 0]} />
               </BarChart>
@@ -375,69 +452,6 @@ export default function AnalyticsTab({ refreshKey }) {
           )}
         </ChartPanel>
       </div>
-
-      <div className="analytics-row three-col">
-        <ChartPanel title="Cases by Forum" subtitle="Top 8">
-          {forumData.length === 0 ? (
-            <EmptyChart text="No forum data" />
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={forumData} layout="vertical" margin={{ left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: axisColor }} allowDecimals={false} />
-                <YAxis dataKey="forum" type="category" tick={{ fontSize: 10, fill: axisColor }} width={80} />
-                <Tooltip cursor={{ fill: cursorFill }} />
-                <Bar dataKey="count" fill={primaryBar} radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </ChartPanel>
-
-        <ChartPanel title="Cases by Railway" subtitle="Top 8">
-          {railwayData.length === 0 ? (
-            <EmptyChart text="No railway data" />
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={railwayData} layout="vertical" margin={{ left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: axisColor }} allowDecimals={false} />
-                <YAxis dataKey="railway" type="category" tick={{ fontSize: 10, fill: axisColor }} width={80} />
-                <Tooltip cursor={{ fill: cursorFill }} />
-                <Bar dataKey="count" fill={blueBar} radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </ChartPanel>
-
-        <ChartPanel title="Case Age Distribution" subtitle="From created_at">
-          {ageData.length === 0 ? (
-            <EmptyChart text="No age data" />
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={ageData}>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="bucket" tick={{ fontSize: 11, fill: axisColor }} />
-                <YAxis tick={{ fontSize: 11, fill: axisColor }} allowDecimals={false} />
-                <Tooltip cursor={{ fill: cursorFill }} />
-                <Bar dataKey="count" fill={orangeBar} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </ChartPanel>
-      </div>
-
-      {overdueReplies.length > 0 && (
-        <div className="analytics-row">
-          <AttentionList
-            title="Replies Awaiting Filing (Overdue)"
-            items={overdueReplies}
-            emptyText="No overdue replies"
-            kind="replies"
-          />
-        </div>
-      )}
-
-      <InsightsStrip insights={insights} />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 const { run, get, all } = require('../config/dbHelper');
 const { db } = require('../config/database');
 const { logger } = require('../config/logger');
-const { DISPOSED_STATUSES, istToday } = require('../config/constants');
+const { DISPOSED_STATUSES, FROZEN_STATUSES, istToday } = require('../config/constants');
 
 const CONCURRENCY = 20;
 const FETCH_TIMEOUT = 15000;
@@ -112,6 +112,42 @@ function parseDailyOrders(html) {
   return result;
 }
 
+function stripHtmlTags(html) {
+  if (!html) return '';
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractCurrentNextDate(html) {
+  const text = stripHtmlTags(html);
+  const patterns = [
+    /present\s*\/?\s*next\s+listed\s+on\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i,
+    /present\s+\/\s*next\s+listed\s+on\s*(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i,
+    /next\s+listed\s+on\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i,
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m) {
+      const d = parseDate(m[1]);
+      if (d) return { nextDate: d, status: extractCaseStatusFromText(text) };
+    }
+  }
+  return { nextDate: null, status: extractCaseStatusFromText(text) };
+}
+
+function extractCaseStatusFromText(text) {
+  if (/disposed|allowed|dismissed/i.test(text)) return 'Disposed';
+  if (/stay\s+granted/i.test(text)) return 'Stay Granted';
+  if (/sine\s+die/i.test(text)) return 'Sine Die';
+  if (/pending/i.test(text)) return 'Pending';
+  return null;
+}
+
 async function checkCase(c) {
   const result = { caseId: c.id, caseRefNo: c.case_ref_no, petitioner: c.applicant || 'Unknown', status: 'pending', hearingsAdded: 0, pdfsAdded: 0, newNextDate: null, error: null };
 
@@ -140,6 +176,20 @@ async function checkCase(c) {
     const html = await fetchWithTimeout(dailyUrl);
     const orders = parseDailyOrders(html);
 
+    let currentNext = null;
+    let currentStatus = null;
+    try {
+      const detailHtml = await fetchWithTimeout(doc.storage_path);
+      const extracted = extractCurrentNextDate(detailHtml);
+      currentNext = extracted.nextDate;
+      currentStatus = extracted.status;
+      if (currentNext) {
+        logger.info({ case: c.case_ref_no, currentNextFromDetail: currentNext }, 'Fetched current next date from Misdetailreport page');
+      }
+    } catch (e) {
+      logger.warn({ case: c.case_ref_no, error: e.message }, 'Failed to fetch Misdetailreport page for current date');
+    }
+
     const syncTransaction = db.transaction(() => {
       for (const h of orders.hearings) {
         const stmt = db.prepare('INSERT OR IGNORE INTO hearing_history (case_id, hearing_date, order_summary, order_raw_text) VALUES (?, ?, ?, ?)');
@@ -159,22 +209,50 @@ async function checkCase(c) {
         }
       }
 
-      if (orders.hearings.length > 0) {
+      let finalNextDate = null;
+      if (currentNext) {
+        finalNextDate = currentNext;
+      } else if (orders.hearings.length > 0) {
         const sorted = [...orders.hearings].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
         const latestWithNext = sorted.find(h => h.nextDate);
         if (latestWithNext?.nextDate) {
-          const currentNext = get('SELECT next_hearing_date FROM cases WHERE id = ?', [c.id]);
-          if (!currentNext?.next_hearing_date || latestWithNext.nextDate > currentNext.next_hearing_date) {
-            db.prepare('UPDATE cases SET next_hearing_date = ? WHERE id = ?').run(latestWithNext.nextDate, c.id);
-            result.newNextDate = latestWithNext.nextDate;
-            logger.info({ case: c.case_ref_no, from: currentNext?.next_hearing_date, to: latestWithNext.nextDate, hearingDate: latestWithNext.date }, 'Updated next_hearing_date');
+          finalNextDate = latestWithNext.nextDate;
+        }
+      }
+
+      if (finalNextDate) {
+        const cur = get('SELECT next_hearing_date FROM cases WHERE id = ?', [c.id]);
+        const currentVal = cur?.next_hearing_date;
+        if (!currentVal || finalNextDate !== currentVal) {
+          db.prepare('UPDATE cases SET next_hearing_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(finalNextDate, c.id);
+          result.newNextDate = finalNextDate;
+          logger.info({ case: c.case_ref_no, from: currentVal, to: finalNextDate, source: currentNext ? 'detail_page' : 'proceedings' }, 'Updated next_hearing_date');
+        }
+      } else if (orders.hearings.length > 0) {
+        const sorted = [...orders.hearings].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        const futureHearings = sorted.filter(h => h.date >= today);
+        if (futureHearings.length === 0) {
+          const cur = get('SELECT next_hearing_date FROM cases WHERE id = ?', [c.id]);
+          if (cur?.next_hearing_date) {
+            db.prepare('UPDATE cases SET next_hearing_date = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(c.id);
+            logger.info({ case: c.case_ref_no, from: cur.next_hearing_date, to: null }, 'Cleared stale next_hearing_date (no future hearing found)');
           }
         }
       }
 
-      if (orders.caseStatus === 'Disposed') {
-        db.prepare("UPDATE cases SET present_status = 'Disposed', next_hearing_date = NULL WHERE id = ?").run(c.id);
+      const effectiveStatus = currentStatus || orders.caseStatus;
+      if (effectiveStatus === 'Disposed') {
+        db.prepare("UPDATE cases SET present_status = 'Disposed', next_hearing_date = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(c.id);
         result.caseStatus = 'Disposed';
+      } else if (FROZEN_STATUSES.includes(effectiveStatus)) {
+        const cur = get('SELECT next_hearing_date, present_status FROM cases WHERE id = ?', [c.id]);
+        if (cur?.next_hearing_date || cur?.present_status !== effectiveStatus) {
+          db.prepare("UPDATE cases SET present_status = ?, next_hearing_date = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(effectiveStatus, c.id);
+          result.caseStatus = effectiveStatus;
+          logger.info({ case: c.case_ref_no, status: effectiveStatus }, 'Cleared next_hearing_date (frozen case)');
+        }
+      } else if (effectiveStatus && effectiveStatus !== 'Pending') {
+        db.prepare("UPDATE cases SET present_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(effectiveStatus, c.id);
       }
 
       db.prepare('UPDATE cases SET last_checked_at = CURRENT_TIMESTAMP WHERE id = ?').run(c.id);
@@ -193,18 +271,30 @@ async function checkCase(c) {
 }
 
 async function runSmartSync() {
-  const today = new Date().toISOString().split('T')[0];
-  const placeholders = DISPOSED_STATUSES.map(() => '?').join(',');
+  const today = istToday();
+  const disposedPlaceholders = DISPOSED_STATUSES.map(() => '?').join(',');
   const cases = all(`
     SELECT c.* FROM cases c
-    WHERE c.next_hearing_date IS NOT NULL
-    AND c.next_hearing_date < ?
-    AND c.present_status NOT IN (${placeholders})
-    AND (c.last_checked_at IS NULL OR c.last_checked_at < ?)
-    ORDER BY c.next_hearing_date ASC
-  `, [today, ...DISPOSED_STATUSES, today]);
+    WHERE c.present_status NOT IN (${disposedPlaceholders})
+      AND c.id IN (
+        SELECT DISTINCT case_id FROM case_documents WHERE storage_path LIKE '%Misdetailreport123.php%'
+      )
+      AND (
+        c.next_hearing_date IS NULL
+        OR c.next_hearing_date < ?
+        OR c.last_checked_at IS NULL
+        OR c.last_checked_at < DATE('now', '-7 days')
+      )
+    ORDER BY
+      CASE
+        WHEN c.next_hearing_date IS NULL THEN 0
+        WHEN c.next_hearing_date < ? THEN 1
+        ELSE 2
+      END,
+      c.last_checked_at ASC NULLS FIRST
+  `, [...DISPOSED_STATUSES, today, today]);
 
-  logger.info({ count: cases.length }, 'Smart sync - past-due cases to check');
+  logger.info({ count: cases.length, today }, 'Smart sync - all active CAT cases to check');
 
   const results = { updated: [], unchanged: [], errors: [], pending: [], total: cases.length };
 

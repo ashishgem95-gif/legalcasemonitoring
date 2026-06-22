@@ -27,7 +27,15 @@ const getCases = async (req, res) => {
                WHEN COALESCE(lh.last_hearing_uploaded, 0) = 1 THEN 0
                WHEN COALESCE(lh.last_hearing_order, '') = '' THEN 1
                ELSE 0
-             END AS has_pending_order_upload
+             END AS has_pending_order_upload,
+             CASE
+               WHEN c.next_hearing_date IS NOT NULL
+                 AND c.next_hearing_date < DATE('now')
+                 AND COALESCE(c.present_status, 'Pending') != 'Disposed'
+               THEN 1 ELSE 0
+             END AS has_stale_date,
+             c.sync_status,
+             c.last_sync_error
       FROM cases c
       LEFT JOIN (
         SELECT h1.case_id, h1.hearing_date AS last_hearing_date, h1.order_raw_text AS last_hearing_order, h1.order_uploaded AS last_hearing_uploaded

@@ -107,11 +107,14 @@ router.get('/file-movements', enforceScope, getMovements);
 router.post('/file-movements', enforceScope, createMovement);
 
 // ── Reporting ──
-const { getCaseSummary, getHearingCalendar, getZoneDistribution, exportCases } = require('../controllers/reportController');
+const { getCaseSummary, getHearingCalendar, getZoneDistribution, exportCases, getColumnCatalog, getFilterOptions, generateZoneExcel } = require('../controllers/reportController');
 router.get('/reports/case-summary', enforceScope, getCaseSummary);
 router.get('/reports/hearing-calendar', enforceScope, getHearingCalendar);
 router.get('/reports/zone-distribution', enforceScope, getZoneDistribution);
 router.get('/reports/export', enforceScope, exportCases);
+router.get('/reports/column-catalog', enforceScope, getColumnCatalog);
+router.get('/reports/filter-options', enforceScope, getFilterOptions);
+router.post('/reports/zone-excel', enforceScope, generateZoneExcel);
 
 // ── Analytics ──
 const { getDashboard, getSystemHealth, getChartData, getInsights } = require('../controllers/analyticsController');
@@ -129,6 +132,12 @@ const { getPresets, createPreset, deletePreset } = require('../controllers/viewP
 router.get('/view-presets', getPresets);
 router.post('/view-presets', validate(viewPresetSchema), createPreset);
 router.delete('/view-presets/:id', deletePreset);
+
+// ── Excel Import ──
+const { getFileInfo: getExcelFileInfo, triggerImport, getHistory: getExcelImportHistory } = require('../controllers/excelImportController');
+router.get('/excel-import/file-info', requireRole('Super Admin / Central Legal Cell', 'admin'), getExcelFileInfo);
+router.post('/excel-import/check', requireRole('Super Admin / Central Legal Cell', 'admin'), triggerImport);
+router.get('/excel-import/history', requireRole('Super Admin / Central Legal Cell', 'admin'), getExcelImportHistory);
 
 // ── Full-Text Search ──
 const { search } = require('../controllers/searchController');
@@ -152,11 +161,13 @@ const { getAuditLog } = require('../controllers/auditLogController');
 router.get('/audit-log', requireRole('Super Admin / Central Legal Cell', 'admin'), getAuditLog);
 
 // ── Batch Sync ──
-const { triggerBatchSync, triggerPlaywrightSync, triggerOrderSync, triggerSmartSync, getSyncStatus, resyncSingleCase } = require('../controllers/syncController');
+const { triggerBatchSync, triggerPlaywrightSync, triggerOrderSync, triggerSmartSync, getSyncStatus, resyncSingleCase, triggerHcSync, triggerFullSync } = require('../controllers/syncController');
 router.post('/sync/start', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), triggerBatchSync);
 router.post('/sync/playwright', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), triggerPlaywrightSync);
 router.post('/sync/orders', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), triggerOrderSync);
 router.post('/sync/smart', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), triggerSmartSync);
+router.post('/sync/hc', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), triggerHcSync);
+router.post('/sync/full', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), triggerFullSync);
 router.post('/sync/case/:id', syncLimiter, requireRole('Super Admin / Central Legal Cell', 'admin'), resyncSingleCase);
 router.get('/sync/status', getSyncStatus);
 

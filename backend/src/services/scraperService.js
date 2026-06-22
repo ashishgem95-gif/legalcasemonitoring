@@ -98,20 +98,25 @@ function parseDateString(dateStr) {
       let day, month, year;
       if (parts[0].length === 4) {
         year = parseInt(parts[0], 10);
-        month = parseInt(parts[1], 10) - 1;
+        month = parseInt(parts[1], 10);
         day = parseInt(parts[2], 10);
       } else {
         day = parseInt(parts[0], 10);
-        month = parseInt(parts[1], 10) - 1;
+        month = parseInt(parts[1], 10);
         year = parseInt(parts[2], 10);
         if (year < 100) year += 2000;
       }
-      const d = new Date(year, month, day);
-      if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
     }
 
-    const parsed = Date.parse(dateStr);
-    if (!isNaN(parsed)) return new Date(parsed).toISOString().split('T')[0];
+    const months = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
+    const textMatch = dateStr.trim().match(/^(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})$/);
+    if (textMatch) {
+      const m = months[textMatch[2].toLowerCase().substring(0, 3)];
+      if (m) return `${textMatch[3]}-${String(m).padStart(2, '0')}-${String(parseInt(textMatch[1])).padStart(2, '0')}`;
+    }
   } catch (e) {
     console.error('Error parsing date string:', dateStr, e.message);
   }
@@ -129,6 +134,8 @@ function fallbackParseCourtUpdate(caseRecord, text) {
 
   let next_hearing_date = null;
   const nextHearingPatterns = [
+    /present\s*\/?\s*next\s+listed\s+on\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i,
+    /present\s+\/\s*next\s+listed\s+on\s*(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i,
     /(?:next\s+hearing|next\s+listing|listed\s+on|adjourned\s+to|next\s+date)\s*(?:is|on|of|for)?\s*[:\-]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i,
     /(?:next\s+hearing|next\s+listing|listed\s+on|adjourned\s+to|next\s+date)\s*(?:is|on|of|for)?\s*[:\-]?\s*(\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})/i,
     /(?:next\s+hearing|next\s+listing|listed\s+on|adjourned\s+to|next\s+date)\s*(?:is|on|of|for)?\s*[:\-]?\s*(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i
@@ -276,18 +283,16 @@ async function checkCaseLinks(headers = {}, dueOnly = false) {
         const { text, html } = await withRetry(() => fetchPageText(c.court_link), c.id);
         const hash = calculateHash(text);
 
-        if (!c.last_fetched_hash) {
-          run('UPDATE cases SET last_fetched_hash = ?, last_fetched_at = CURRENT_TIMESTAMP WHERE id = ?', [hash, c.id]);
-          console.log(`[Scraper] Baseline hash recorded for ${c.case_ref_no}`);
-          return { checked: true, alert: false };
-        }
+        const isFirstRun = !c.last_fetched_hash;
+        const isChanged = !isFirstRun && c.last_fetched_hash !== hash;
 
-        if (c.last_fetched_hash === hash) {
+        if (!isFirstRun && !isChanged) {
           console.log(`[Scraper] No changes detected for ${c.case_ref_no}`);
           return { checked: true, alert: false };
         }
 
-        console.log(`[Scraper] Changes detected on page for ${c.case_ref_no}. Running parser...`);
+        const phase = isFirstRun ? 'Baseline (parsing page on first run)' : 'Changes detected';
+        console.log(`[Scraper] ${phase} for ${c.case_ref_no}. Running parser...`);
         const parsed = await parseCourtPage(c, text, headers);
         const pdfs = extractPdfLinksWithNearbyDates(html, c.court_link);
 
@@ -295,7 +300,7 @@ async function checkCaseLinks(headers = {}, dueOnly = false) {
           db.prepare('UPDATE cases SET last_fetched_hash = ?, last_fetched_at = CURRENT_TIMESTAMP WHERE id = ?').run(hash, c.id);
 
           if (!parsed || !parsed.order_found) {
-            return { checked: true, alert: false };
+            return { checked: true, alert: !isFirstRun };
           }
 
           if (parsed.order_date) {
@@ -312,10 +317,21 @@ async function checkCaseLinks(headers = {}, dueOnly = false) {
           if (parsed.next_hearing_date) {
             db.prepare('INSERT OR IGNORE INTO hearing_history (case_id, hearing_date, order_summary, order_raw_text) VALUES (?, ?, ?, ?)')
               .run(c.id, parsed.next_hearing_date, 'Future scheduled hearing date extracted from court website.', 'System-generated reminder.');
+            db.prepare('UPDATE cases SET next_hearing_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+              .run(parsed.next_hearing_date, c.id);
+            console.log(`[Scraper] Updated next_hearing_date to ${parsed.next_hearing_date} for ${c.case_ref_no}`);
           }
 
           if (parsed.case_status) {
-            db.prepare('UPDATE cases SET present_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(parsed.case_status, c.id);
+            const newStatus = parsed.case_status;
+            const updates = ['present_status = ?', 'updated_at = CURRENT_TIMESTAMP'];
+            const params = [newStatus];
+            if (newStatus === 'Disposed' || newStatus === 'Sine Die' || newStatus === 'Stay Granted') {
+              updates.push('next_hearing_date = NULL');
+            }
+            updates.push('WHERE id = ?');
+            params.push(c.id);
+            db.prepare(`UPDATE cases SET ${updates.join(', ')}`).run(...params);
           }
 
           if (parsed.progression_stage && STAGE_COLUMN_MAP[parsed.progression_stage]) {
