@@ -1,3 +1,5 @@
 # (empty — tracking entire project)
 .vercel
 node_modules/
+legal_tracker.db-shm
+legal_tracker.db-wal
