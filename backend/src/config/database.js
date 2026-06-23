@@ -29,7 +29,20 @@ if (volumeDbExists) {
       console.log('Could not replace volume DB:', e.message);
     }
   } else {
-    console.log('Using existing volume database, size:', volStat.size);
+    // Check if volume DB has case data; if not, replace with deploy
+    const tempDb = new Database(volumePath);
+    const caseCount = tempDb.prepare('SELECT COUNT(*) AS count FROM cases').get();
+    tempDb.close();
+    if (caseCount.count === 0 && fs.existsSync(deployPath)) {
+      try {
+        fs.copyFileSync(deployPath, volumePath);
+        console.log('Replaced volume DB (0 cases) with deploy copy');
+      } catch (e) {
+        console.log('Could not replace empty-case volume DB:', e.message);
+      }
+    } else {
+      console.log('Using existing volume database, size:', volStat.size, 'cases:', caseCount ? caseCount.count : '?');
+    }
   }
   dbPath = volumePath;
 } else if (dataDirExists) {
