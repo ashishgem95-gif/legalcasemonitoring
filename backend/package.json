@@ -8,6 +8,7 @@
     "test": "node src/tests/api.test.js && node src/tests/test-part1.js && node src/tests/test-part2.js && node src/tests/test-part3.js"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.4",
     "better-sqlite3": "^12.10.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
