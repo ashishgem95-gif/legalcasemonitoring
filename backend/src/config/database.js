@@ -19,8 +19,19 @@ console.log('DB paths - deploy:', deployPath, 'exists:', fs.existsSync(deployPat
 console.log('Data dir /data exists:', dataDirExists);
 
 if (volumeDbExists) {
+  // Check if volume DB is empty (freshly created ~20KB) and replace with deploy data
+  const volStat = fs.statSync(volumePath);
+  if (volStat.size < 100000 && fs.existsSync(deployPath)) {
+    try {
+      fs.copyFileSync(deployPath, volumePath);
+      console.log('Replaced empty volume DB with deploy copy');
+    } catch (e) {
+      console.log('Could not replace volume DB:', e.message);
+    }
+  } else {
+    console.log('Using existing volume database, size:', volStat.size);
+  }
   dbPath = volumePath;
-  console.log('Using existing volume database');
 } else if (dataDirExists) {
   // Volume is mounted but empty - copy from deploy
   try {
