@@ -8,15 +8,20 @@ const PASSWORD_ITERATIONS = 600000;
 // Use Railway volume if mounted, otherwise default path
 const volumePath = '/data/legal_tracker.db';
 const deployPath = path.resolve(__dirname, '..', '..', '..', 'legal_tracker.db');
-const dbPath = fs.existsSync(volumePath) ? volumePath : deployPath;
+let dbPath = deployPath;
 
-// Copy existing database to volume if volume available but empty
-if (!fs.existsSync(volumePath) && fs.existsSync(deployPath) && process.env.RAILWAY_VOLUME_MOUNT) {
+if (fs.existsSync(volumePath)) {
+  dbPath = volumePath;
+  console.log('Using volume database at:', volumePath);
+} else if (fs.existsSync(deployPath)) {
+  // Try to copy existing database to volume
   try {
+    fs.mkdirSync('/data', { recursive: true });
     fs.copyFileSync(deployPath, volumePath);
-    console.log('Copied database to volume path:', volumePath);
+    dbPath = volumePath;
+    console.log('Copied database to volume:', volumePath);
   } catch (e) {
-    console.log('Could not copy to volume:', e.message);
+    console.log('Using deploy database (volume unavailable):', deployPath);
   }
 }
 
@@ -304,7 +309,7 @@ console.log('users table verified/created.');
 const userCount = db.prepare('SELECT COUNT(*) AS count FROM users').get();
 if (userCount.count === 0) {
   console.log('Pre-seeding users database...');
-  const insertUser = db.prepare('INSERT INTO users (id, name, email, password_hash, salt, password_iterations, role, railway_scope, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const insertUser = db.prepare('INSERT INTO users (id, name, email, password_hash, salt, password_iterations, role, railway_scope, desc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
   const seedUsers = [
     { id: 'admin', name: 'Shri R. K. Singh', email: 'admin@railways.gov.in', password: 'abcd1234', role: 'Super Admin / Central Legal Cell', railwayScope: 'All', desc: 'Complete global monitoring access to all cases across all 17 Zonal Railways and Divisions.' },
