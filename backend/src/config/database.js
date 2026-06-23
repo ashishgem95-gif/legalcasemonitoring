@@ -7,7 +7,7 @@ const PASSWORD_ITERATIONS = 600000;
 
 // Use Railway volume if mounted, otherwise default path
 const volumePath = '/data/legal_tracker.db';
-const deployPath = path.resolve(__dirname, '..', '..', '..', 'legal_tracker.db');
+const deployPath = path.resolve(__dirname, '..', '..', 'legal_tracker.db');
 let dbPath = deployPath;
 
 // Check if volume directory exists and is writable
