@@ -10,20 +10,30 @@ const volumePath = '/data/legal_tracker.db';
 const deployPath = path.resolve(__dirname, '..', '..', '..', 'legal_tracker.db');
 let dbPath = deployPath;
 
-if (fs.existsSync(volumePath)) {
+// Check if volume directory exists and is writable
+const dataDirExists = fs.existsSync('/data');
+const volumeDbExists = fs.existsSync(volumePath);
+
+console.log('DB paths - volume:', volumePath, 'exists:', volumeDbExists);
+console.log('DB paths - deploy:', deployPath, 'exists:', fs.existsSync(deployPath));
+console.log('Data dir /data exists:', dataDirExists);
+
+if (volumeDbExists) {
   dbPath = volumePath;
-  console.log('Using volume database at:', volumePath);
-} else if (fs.existsSync(deployPath)) {
-  // Try to copy existing database to volume
+  console.log('Using existing volume database');
+} else if (dataDirExists) {
+  // Volume is mounted but empty - copy from deploy
   try {
-    fs.mkdirSync('/data', { recursive: true });
-    fs.copyFileSync(deployPath, volumePath);
+    if (fs.existsSync(deployPath)) {
+      fs.copyFileSync(deployPath, volumePath);
+      console.log('Copied deploy DB to volume, size:', fs.statSync(deployPath).size);
+    }
     dbPath = volumePath;
-    console.log('Copied database to volume:', volumePath);
   } catch (e) {
-    console.log('Using deploy database (volume unavailable):', deployPath);
+    console.log('Volume copy failed:', e.message);
   }
 }
+console.log('Final database path:', dbPath);
 
 const db = new Database(dbPath);
 
