@@ -1,10 +1,24 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 
 const PASSWORD_ITERATIONS = 600000;
 
-const dbPath = path.resolve(__dirname, '..', '..', '..', 'legal_tracker.db');
+// Use Railway volume if mounted, otherwise default path
+const volumePath = '/data/legal_tracker.db';
+const deployPath = path.resolve(__dirname, '..', '..', '..', 'legal_tracker.db');
+const dbPath = fs.existsSync(volumePath) ? volumePath : deployPath;
+
+// Copy existing database to volume if volume available but empty
+if (!fs.existsSync(volumePath) && fs.existsSync(deployPath) && process.env.RAILWAY_VOLUME_MOUNT) {
+  try {
+    fs.copyFileSync(deployPath, volumePath);
+    console.log('Copied database to volume path:', volumePath);
+  } catch (e) {
+    console.log('Could not copy to volume:', e.message);
+  }
+}
 
 const db = new Database(dbPath);
 
