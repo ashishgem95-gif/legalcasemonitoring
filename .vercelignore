@@ -1,0 +1,6 @@
+*.db
+*.db-*
+*.bak
+backups/
+document_archive/
+.DS_Store
