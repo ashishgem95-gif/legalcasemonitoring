@@ -64,11 +64,21 @@ app.use('/api', (req, res, next) => {
 
 // ── Health Check ──
 app.get('/', (req, res) => {
+  let dbStats = null;
+  try {
+    const { db } = require('./config/database');
+    const cases = db.prepare('SELECT COUNT(*) AS count FROM cases').get();
+    const users = db.prepare('SELECT COUNT(*) AS count FROM users').get();
+    dbStats = { cases: cases.count, users: users.count };
+  } catch (e) {
+    dbStats = { error: e.message };
+  }
   res.json({
     status: 'healthy',
     message: 'Legal Case Monitoring System API is active.',
     version: '2.0.0',
     timestamp: new Date().toISOString(),
+    database: dbStats,
   });
 });
 

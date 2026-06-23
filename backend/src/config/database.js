@@ -530,4 +530,16 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_case_documents_case_storage ON case_docu
 db.exec(`CREATE INDEX IF NOT EXISTS idx_case_pleadings_case_id ON case_pleadings(case_id);`);
 console.log('Performance indexes verified/created.');
 
+// Seed default admin if no users exist
+const userCount = db.prepare('SELECT COUNT(*) AS count FROM users').get();
+if (userCount.count === 0) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync('admin123', salt, PASSWORD_ITERATIONS, 64, 'sha512').toString('hex');
+  db.prepare(`INSERT INTO users (id, name, email, role, railway_scope, password_hash, salt, password_iterations)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    'admin', 'Administrator', 'admin', 'Super Admin / Central Legal Cell', 'All', hash, salt, PASSWORD_ITERATIONS
+  );
+  console.log('Seeded default admin user (admin / admin123)');
+}
+
 module.exports = { db, PASSWORD_ITERATIONS };
