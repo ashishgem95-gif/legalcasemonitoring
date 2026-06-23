@@ -327,32 +327,45 @@ db.exec(`
 `);
 console.log('users table verified/created.');
 
+// Reset passwords for known users to 'password' (quick-login compat)
+const knownUserIds = ['admin','user1','user2','usernr','userncr','usernwr','userner','usercr','userwcr','usersecr','userecr','userer','userecor','userser','userwr','userswr','userscr','usersr','usernfr','usermetro','nr_nodal','er_nodal','wr_nodal'];
+const resetStmt = db.prepare('UPDATE users SET password_hash = ?, salt = ?, password_iterations = ? WHERE id = ?');
+knownUserIds.forEach(uid => {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync('password', salt, PASSWORD_ITERATIONS, 64, 'sha512').toString('hex');
+  try { resetStmt.run(hash, salt, PASSWORD_ITERATIONS, uid); } catch (e) { /* skip if not exists */ }
+});
+console.log('Password reset for known users completed.');
+
 const userCount = db.prepare('SELECT COUNT(*) AS count FROM users').get();
 if (userCount.count === 0) {
   console.log('Pre-seeding users database...');
   const insertUser = db.prepare('INSERT INTO users (id, name, email, password_hash, salt, password_iterations, role, railway_scope, desc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
   const seedUsers = [
-    { id: 'admin', name: 'Shri R. K. Singh', email: 'admin@railways.gov.in', password: 'abcd1234', role: 'Super Admin / Central Legal Cell', railwayScope: 'All', desc: 'Complete global monitoring access to all cases across all 17 Zonal Railways and Divisions.' },
-    { id: 'user1', name: 'User One', email: 'user1@railways.gov.in', password: 'user1', role: 'Nodal Officer (Railway Board)', railwayScope: 'All', desc: 'Railway Board user. Can view all cases across all zones.' },
-    { id: 'user2', name: 'User Two', email: 'user2@railways.gov.in', password: 'user2', role: 'Nodal Officer (Railway Board)', railwayScope: 'All', desc: 'Railway Board user. Can view all cases across all zones.' },
-    { id: 'usernr', name: 'User NR', email: 'usernr@railways.gov.in', password: 'usernr', role: 'Nodal Officer (Northern Railway - NR)', railwayScope: 'NR', desc: 'Zonal user. Can view and manage Northern Railway cases.' },
-    { id: 'userncr', name: 'User NCR', email: 'userncr@railways.gov.in', password: 'userncr', role: 'Nodal Officer (North Central Railway - NCR)', railwayScope: 'NCR', desc: 'Zonal user. Can view and manage North Central Railway cases.' },
-    { id: 'usernwr', name: 'User NWR', email: 'usernwr@railways.gov.in', password: 'usernwr', role: 'Nodal Officer (North Western Railway - NWR)', railwayScope: 'NWR', desc: 'Zonal user. Can view and manage North Western Railway cases.' },
-    { id: 'userner', name: 'User NER', email: 'userner@railways.gov.in', password: 'userner', role: 'Nodal Officer (North East Railway - NER)', railwayScope: 'NER', desc: 'Zonal user. Can view and manage North East Railway cases.' },
-    { id: 'usercr', name: 'User CR', email: 'usercr@railways.gov.in', password: 'usercr', role: 'Nodal Officer (Central Railway - CR)', railwayScope: 'CR', desc: 'Zonal user. Can view and manage Central Railway cases.' },
-    { id: 'userwcr', name: 'User WCR', email: 'userwcr@railways.gov.in', password: 'userwcr', role: 'Nodal Officer (West Central Railway - WCR)', railwayScope: 'WCR', desc: 'Zonal user. Can view and manage West Central Railway cases.' },
-    { id: 'usersecr', name: 'User SECR', email: 'usersecr@railways.gov.in', password: 'usersecr', role: 'Nodal Officer (South East Central Railway - SECR)', railwayScope: 'SECR', desc: 'Zonal user. Can view and manage South East Central Railway cases.' },
-    { id: 'userecr', name: 'User ECR', email: 'userecr@railways.gov.in', password: 'userecr', role: 'Nodal Officer (East Central Railway - ECR)', railwayScope: 'ECR', desc: 'Zonal user. Can view and manage East Central Railway cases.' },
-    { id: 'userer', name: 'User ER', email: 'userer@railways.gov.in', password: 'userer', role: 'Nodal Officer (Eastern Railway - ER)', railwayScope: 'ER', desc: 'Zonal user. Can view and manage Eastern Railway cases.' },
-    { id: 'userecor', name: 'User ECoR', email: 'userecor@railways.gov.in', password: 'userecor', role: 'Nodal Officer (East Coast Railway - ECoR)', railwayScope: 'ECoR', desc: 'Zonal user. Can view and manage East Coast Railway cases.' },
-    { id: 'userser', name: 'User SER', email: 'userser@railways.gov.in', password: 'userser', role: 'Nodal Officer (South Eastern Railway - SER)', railwayScope: 'SER', desc: 'Zonal user. Can view and manage South Eastern Railway cases.' },
-    { id: 'userwr', name: 'User WR', email: 'userwr@railways.gov.in', password: 'userwr', role: 'Nodal Officer (Western Railway - WR)', railwayScope: 'WR', desc: 'Zonal user. Can view and manage Western Railway cases.' },
-    { id: 'userswr', name: 'User SWR', email: 'userswr@railways.gov.in', password: 'userswr', role: 'Nodal Officer (South Western Railway - SWR)', railwayScope: 'SWR', desc: 'Zonal user. Can view and manage South Western Railway cases.' },
-    { id: 'userscr', name: 'User SCR', email: 'userscr@railways.gov.in', password: 'userscr', role: 'Nodal Officer (South Central Railway - SCR)', railwayScope: 'SCR', desc: 'Zonal user. Can view and manage South Central Railway cases.' },
-    { id: 'usersr', name: 'User SR', email: 'usersr@railways.gov.in', password: 'usersr', role: 'Nodal Officer (Southern Railway - SR)', railwayScope: 'SR', desc: 'Zonal user. Can view and manage Southern Railway cases.' },
-    { id: 'usernfr', name: 'User NFR', email: 'usernfr@railways.gov.in', password: 'usernfr', role: 'Nodal Officer (Northeast Frontier Railway - NFR)', railwayScope: 'NFR', desc: 'Zonal user. Can view and manage Northeast Frontier Railway cases.' },
-    { id: 'usermetro', name: 'User Metro', email: 'usermetro@railways.gov.in', password: 'usermetro', role: 'Nodal Officer (Metro Railway (Kolkata) - METRO)', railwayScope: 'METRO', desc: 'Zonal user. Can view and manage Metro Railway (Kolkata) cases.' }
+    { id: 'admin', name: 'Shri R. K. Singh', email: 'admin@railways.gov.in', password: 'password', role: 'Super Admin / Central Legal Cell', railwayScope: 'All', desc: 'Complete global monitoring access to all cases across all 17 Zonal Railways and Divisions.' },
+    { id: 'user1', name: 'User One', email: 'user1@railways.gov.in', password: 'password', role: 'Nodal Officer (Railway Board)', railwayScope: 'All', desc: 'Railway Board user. Can view all cases across all zones.' },
+    { id: 'user2', name: 'User Two', email: 'user2@railways.gov.in', password: 'password', role: 'Nodal Officer (Railway Board)', railwayScope: 'All', desc: 'Railway Board user. Can view all cases across all zones.' },
+    { id: 'usernr', name: 'User NR', email: 'usernr@railways.gov.in', password: 'password', role: 'Nodal Officer (Northern Railway - NR)', railwayScope: 'NR', desc: 'Zonal user. Can view and manage Northern Railway cases.' },
+    { id: 'userncr', name: 'User NCR', email: 'userncr@railways.gov.in', password: 'password', role: 'Nodal Officer (North Central Railway - NCR)', railwayScope: 'NCR', desc: 'Zonal user. Can view and manage North Central Railway cases.' },
+    { id: 'usernwr', name: 'User NWR', email: 'usernwr@railways.gov.in', password: 'password', role: 'Nodal Officer (North Western Railway - NWR)', railwayScope: 'NWR', desc: 'Zonal user. Can view and manage North Western Railway cases.' },
+    { id: 'userner', name: 'User NER', email: 'userner@railways.gov.in', password: 'password', role: 'Nodal Officer (North East Railway - NER)', railwayScope: 'NER', desc: 'Zonal user. Can view and manage North East Railway cases.' },
+    { id: 'usercr', name: 'User CR', email: 'usercr@railways.gov.in', password: 'password', role: 'Nodal Officer (Central Railway - CR)', railwayScope: 'CR', desc: 'Zonal user. Can view and manage Central Railway cases.' },
+    { id: 'userwcr', name: 'User WCR', email: 'userwcr@railways.gov.in', password: 'password', role: 'Nodal Officer (West Central Railway - WCR)', railwayScope: 'WCR', desc: 'Zonal user. Can view and manage West Central Railway cases.' },
+    { id: 'usersecr', name: 'User SECR', email: 'usersecr@railways.gov.in', password: 'password', role: 'Nodal Officer (South East Central Railway - SECR)', railwayScope: 'SECR', desc: 'Zonal user. Can view and manage South East Central Railway cases.' },
+    { id: 'userecr', name: 'User ECR', email: 'userecr@railways.gov.in', password: 'password', role: 'Nodal Officer (East Central Railway - ECR)', railwayScope: 'ECR', desc: 'Zonal user. Can view and manage East Central Railway cases.' },
+    { id: 'userer', name: 'User ER', email: 'userer@railways.gov.in', password: 'password', role: 'Nodal Officer (Eastern Railway - ER)', railwayScope: 'ER', desc: 'Zonal user. Can view and manage Eastern Railway cases.' },
+    { id: 'userecor', name: 'User ECoR', email: 'userecor@railways.gov.in', password: 'password', role: 'Nodal Officer (East Coast Railway - ECoR)', railwayScope: 'ECoR', desc: 'Zonal user. Can view and manage East Coast Railway cases.' },
+    { id: 'userser', name: 'User SER', email: 'userser@railways.gov.in', password: 'password', role: 'Nodal Officer (South Eastern Railway - SER)', railwayScope: 'SER', desc: 'Zonal user. Can view and manage South Eastern Railway cases.' },
+    { id: 'userwr', name: 'User WR', email: 'userwr@railways.gov.in', password: 'password', role: 'Nodal Officer (Western Railway - WR)', railwayScope: 'WR', desc: 'Zonal user. Can view and manage Western Railway cases.' },
+    { id: 'userswr', name: 'User SWR', email: 'userswr@railways.gov.in', password: 'password', role: 'Nodal Officer (South Western Railway - SWR)', railwayScope: 'SWR', desc: 'Zonal user. Can view and manage South Western Railway cases.' },
+    { id: 'userscr', name: 'User SCR', email: 'userscr@railways.gov.in', password: 'password', role: 'Nodal Officer (South Central Railway - SCR)', railwayScope: 'SCR', desc: 'Zonal user. Can view and manage South Central Railway cases.' },
+    { id: 'usersr', name: 'User SR', email: 'usersr@railways.gov.in', password: 'password', role: 'Nodal Officer (Southern Railway - SR)', railwayScope: 'SR', desc: 'Zonal user. Can view and manage Southern Railway cases.' },
+    { id: 'usernfr', name: 'User NFR', email: 'usernfr@railways.gov.in', password: 'password', role: 'Nodal Officer (Northeast Frontier Railway - NFR)', railwayScope: 'NFR', desc: 'Zonal user. Can view and manage Northeast Frontier Railway cases.' },
+    { id: 'usermetro', name: 'User Metro', email: 'usermetro@railways.gov.in', password: 'password', role: 'Nodal Officer (Metro Railway (Kolkata) - METRO)', railwayScope: 'METRO', desc: 'Zonal user. Can view and manage Metro Railway (Kolkata) cases.' },
+    { id: 'nr_nodal', name: 'Smt. Anjali Sharma', email: 'nr_nodal@railways.gov.in', password: 'password', role: 'Nodal Officer (Northern Railway - NR)', railwayScope: 'NR', desc: 'Demo quick-login user for Northern Railway.' },
+    { id: 'er_nodal', name: 'Shri Manoj Mukherjee', email: 'er_nodal@railways.gov.in', password: 'password', role: 'Nodal Officer (Eastern Railway - ER)', railwayScope: 'ER', desc: 'Demo quick-login user for Eastern Railway.' },
+    { id: 'wr_nodal', name: 'Shri Vikram Mehta', email: 'wr_nodal@railways.gov.in', password: 'password', role: 'Nodal Officer (Western Railway - WR)', railwayScope: 'WR', desc: 'Demo quick-login user for Western Railway.' }
   ];
 
   seedUsers.forEach(u => {
@@ -529,17 +542,5 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_hearing_history_hearing_date ON hearing_
 db.exec(`CREATE INDEX IF NOT EXISTS idx_case_documents_case_storage ON case_documents(case_id, storage_path);`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_case_pleadings_case_id ON case_pleadings(case_id);`);
 console.log('Performance indexes verified/created.');
-
-// Seed default admin if no users exist
-const userCount = db.prepare('SELECT COUNT(*) AS count FROM users').get();
-if (userCount.count === 0) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.pbkdf2Sync('admin123', salt, PASSWORD_ITERATIONS, 64, 'sha512').toString('hex');
-  db.prepare(`INSERT INTO users (id, name, email, role, railway_scope, password_hash, salt, password_iterations)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
-    'admin', 'Administrator', 'admin', 'Super Admin / Central Legal Cell', 'All', hash, salt, PASSWORD_ITERATIONS
-  );
-  console.log('Seeded default admin user (admin / admin123)');
-}
 
 module.exports = { db, PASSWORD_ITERATIONS };
