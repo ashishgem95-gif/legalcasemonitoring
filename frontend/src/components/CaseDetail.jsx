@@ -607,16 +607,16 @@ export default function CaseDetail() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <a href={doc.storage_path} target="_blank" rel="noopener noreferrer"
+                      <a href={api.getDocumentDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer"
                         style={{
                           background: 'var(--status-pending)', color: '#fff', border: 'none', borderRadius: '6px',
                           padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600,
                           cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
                         }}>
                         <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 2h10a2 2 2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
-                        {doc.mime_type === 'application/pdf' ? 'Open PDF' : 'Open Case Page'}
+                        {doc.mime_type === 'application/pdf' ? 'Open PDF' : 'Open'}
                       </a>
                     </div>
                   </div>

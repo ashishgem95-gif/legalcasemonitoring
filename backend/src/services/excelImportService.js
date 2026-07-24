@@ -306,22 +306,33 @@ async function readAndImportExcel(triggeredBy = 'manual') {
   }
 
   if (casesToSync.length > 0) {
-    setImmediate(async () => {
-      const { runSmartSyncForCase } = require('./smartSync');
-      for (const c of casesToSync) {
-        try {
-          logger.info({ caseRefNo: c.caseRefNo }, 'Excel import: triggering court sync');
-          await runSmartSyncForCase(c.id);
-        } catch (err) {
-          logger.error({ caseRefNo: c.caseRefNo, error: err.message }, 'Excel import: sync failed');
-        }
-        await new Promise(r => setTimeout(r, 500));
-      }
-      logger.info({ count: casesToSync.length }, 'Excel import: all queued syncs completed');
-    });
+    // Kick off court syncs for the affected cases. We do NOT await here (the
+    // import response returns immediately), but we attach a .catch so a failure
+    // is logged instead of becoming an unhandled promise rejection that could
+    // crash the process.
+    runQueuedCourtSyncs(casesToSync).catch(err =>
+      logger.error({ err: err.message }, 'Excel import: queued sync batch failed'));
   }
 
   return result;
+}
+
+// Processes the post-import court syncs sequentially. Defined at module scope so
+// it is independent of the request lifecycle and won't be orphaned by a local
+// reference — failures are caught per-case and logged.
+async function runQueuedCourtSyncs(casesToSync) {
+  const { runSmartSyncForCase } = require('./smartSync');
+  logger.info({ count: casesToSync.length }, 'Excel import: starting queued court syncs');
+  for (const c of casesToSync) {
+    try {
+      logger.info({ caseRefNo: c.caseRefNo }, 'Excel import: triggering court sync');
+      await runSmartSyncForCase(c.id);
+    } catch (err) {
+      logger.error({ caseRefNo: c.caseRefNo, error: err.message }, 'Excel import: sync failed');
+    }
+    await new Promise(r => setTimeout(r, 500));
+  }
+  logger.info({ count: casesToSync.length }, 'Excel import: all queued syncs completed');
 }
 
 function getImportHistory(limit = 20) {

@@ -15,6 +15,7 @@ const COLUMN_CATALOG = [
   { col: 'case_year', label: 'Case Year', group: 'Core Case Info', type: 'text' },
   { col: 'forum', label: 'Forum', group: 'Core Case Info', type: 'text' },
   { col: 'present_status', label: 'Present Status', group: 'Core Case Info', type: 'text' },
+  { col: 'status_category', label: 'Status Category (Normalized)', group: 'Core Case Info', type: 'text' },
   { col: 'synopsis', label: 'Synopsis / Issue', group: 'Core Case Info', type: 'text' },
   { col: 'file_no', label: 'File No', group: 'Core Case Info', type: 'text' },
   { col: 'link_file_no', label: 'Link File No', group: 'Core Case Info', type: 'text' },

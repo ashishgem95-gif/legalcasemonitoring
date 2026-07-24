@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { run, get, all } = require('../config/dbHelper');
+const { db } = require('../config/database');
 const { logger } = require('../config/logger');
 const { buildCourtUrls } = require('./courtUrlBuilder');
 
@@ -129,6 +130,9 @@ async function processCase(c) {
 
     const { html, finalUrl } = await fetchWithRetry(urlInfo.url);
 
+    // All writes for this case are wrapped in a single transaction so a partial
+    // failure cannot leave the case in an inconsistent state.
+    db.transaction(() => {
     // Save court link to case
     run('UPDATE cases SET court_link = ?, last_fetched_hash = ?, last_fetched_at = CURRENT_TIMESTAMP WHERE id = ?',
       [urlInfo.url, calculateHash(html), c.id]);
@@ -193,6 +197,7 @@ async function processCase(c) {
     } else {
       result.success = true; // URL saved, but limited data
     }
+    })();
   } catch (err) {
     result.error = err.message;
   }

@@ -19,6 +19,20 @@ const upload = multer({
   },
 });
 
+const uploadExcel = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    const ext = (file.originalname || '').toLowerCase();
+    if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        ext.endsWith('.xlsx') || ext.endsWith('.xls') || ext.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel files (.xlsx / .xls / .csv) are allowed.'), false);
+    }
+  },
+});
+
 const syncLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: 3,
@@ -138,6 +152,12 @@ const { getFileInfo: getExcelFileInfo, triggerImport, getHistory: getExcelImport
 router.get('/excel-import/file-info', requireRole('Super Admin / Central Legal Cell', 'admin'), getExcelFileInfo);
 router.post('/excel-import/check', requireRole('Super Admin / Central Legal Cell', 'admin'), triggerImport);
 router.get('/excel-import/history', requireRole('Super Admin / Central Legal Cell', 'admin'), getExcelImportHistory);
+
+// ── HC/SC Excel Import (homepage widget) ──
+const { getFileInfo: getHcExcelFileInfo, triggerImport: triggerHcExcelImport, uploadAndImport: triggerHcExcelUpload } = require('../controllers/hcExcelController');
+router.get('/hc-excel-import/file-info', requireRole('Super Admin / Central Legal Cell', 'admin'), getHcExcelFileInfo);
+router.post('/hc-excel-import/check', requireRole('Super Admin / Central Legal Cell', 'admin'), triggerHcExcelImport);
+router.post('/hc-excel-import/upload', requireRole('Super Admin / Central Legal Cell', 'admin'), uploadExcel.single('file'), triggerHcExcelUpload);
 
 // ── Full-Text Search ──
 const { search } = require('../controllers/searchController');

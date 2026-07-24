@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import HomeExcelWidget from './HomeExcelWidget';
+import HomeCalendar from './HomeCalendar';
 import './HomePage.css';
 
 function formatDate(d) {
@@ -267,6 +269,16 @@ export default function HomePage() {
           </ul>
         </section>
       )}
+
+      {/* Bottom row: Excel import (left) + Hearing calendar (right) */}
+      <section className="homepage-bottom-row">
+        <div className="homepage-bottom-col">
+          <HomeExcelWidget />
+        </div>
+        <div className="homepage-bottom-col">
+          <HomeCalendar cases={cases} />
+        </div>
+      </section>
 
       <section className="homepage-footer-info">
         <div className="homepage-footer-row">

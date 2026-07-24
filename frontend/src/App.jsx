@@ -13,6 +13,7 @@ import FileActivityAlerts from './components/FileActivityAlerts';
 import ErrorBoundary from './components/ErrorBoundary';
 import DensityToggle from './components/DensityToggle';
 import NotificationBell from './components/NotificationBell';
+import WeatherWidget from './components/WeatherWidget';
 import api from './utils/api';
 import { ThemeProvider, useTheme } from './utils/ThemeContext';
 
@@ -110,8 +111,9 @@ function Header({ user, onLogout }) {
           </div>
         </div>
 
-        {/* Right side: Settings + User */}
+        {/* Right side: Weather + Settings + User */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <WeatherWidget />
           <GearSettings />
           <NotificationBell />
           <DensityToggle />

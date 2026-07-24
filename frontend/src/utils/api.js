@@ -219,8 +219,8 @@ export const api = {
   getNotifications: () => request('/notifications'),
   dismissNotification: (alertId) => request(`/notifications/alert/${alertId}/read`, { method: 'PUT' }),
   dismissAllNotifications: () => request('/notifications/read-all', { method: 'PUT' }),
-  triggerCrawl: () => requestWithAi('/cases/trigger-crawl', { method: 'POST' }),
-  checkDueCases: () => requestWithAi('/cases/check-due-cases', { method: 'POST' }),
+  triggerCrawl: () => request('/alerts/trigger-crawl', { method: 'POST' }),
+  checkDueCases: () => request('/alerts/check-due-cases', { method: 'POST' }),
   smartSync: () => requestWithAi('/sync/smart', { method: 'POST' }),
   hcSync: () => request('/sync/hc', { method: 'POST', body: {} }),
   fullSync: () => request('/sync/full', { method: 'POST', body: {} }),
@@ -281,6 +281,13 @@ export const api = {
   getExcelFileInfo: () => request('/excel-import/file-info'),
   checkExcelImport: () => request('/excel-import/check', { method: 'POST' }),
   getExcelImportHistory: (limit = 20) => request(`/excel-import/history?limit=${limit}`),
+  getHcExcelFileInfo: () => request('/hc-excel-import/file-info'),
+  checkHcExcelImport: () => request('/hc-excel-import/check', { method: 'POST' }),
+  uploadHcExcelAndImport: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request('/hc-excel-import/upload', { method: 'POST', body: formData });
+  },
 };
 
 export default api;

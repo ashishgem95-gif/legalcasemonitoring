@@ -29,10 +29,9 @@ const getAlerts = async (req, res) => {
   }
 };
 
-// PUT /api/alerts/:id/read (legacy)
+// PUT /api/alerts/:id/read (legacy) — per-user read state only
 const markAlertAsRead = async (req, res) => {
   try {
-    run('UPDATE case_alerts SET is_read = 1 WHERE id = ?', [req.params.id]);
     run('INSERT OR IGNORE INTO case_alert_reads (alert_id, user_id) VALUES (?, ?)', [req.params.id, req.user.id]);
     res.json({ message: 'Notification marked as read.' });
   } catch (err) {
@@ -209,11 +208,21 @@ const checkDueCases = async (req, res) => {
 
 const markAllAlertsAsRead = async (req, res) => {
   try {
-    if (req._railwayScope) {
-      run(`UPDATE case_alerts SET is_read = 1 WHERE is_read = 0 AND case_id IN (SELECT id FROM cases WHERE railway = ?)`, [req._railwayScope]);
+    const userId = req.user.id;
+    const scope = req._railwayScope;
+    let query, params;
+    if (scope) {
+      query = `INSERT OR IGNORE INTO case_alert_reads (alert_id, user_id)
+               SELECT a.id, ? FROM case_alerts a
+               JOIN cases c ON a.case_id = c.id
+               WHERE c.railway = ?`;
+      params = [userId, scope];
     } else {
-      run('UPDATE case_alerts SET is_read = 1 WHERE is_read = 0');
+      query = `INSERT OR IGNORE INTO case_alert_reads (alert_id, user_id)
+               SELECT id, ? FROM case_alerts`;
+      params = [userId];
     }
+    run(query, params);
     res.json({ message: 'All notifications dismissed.' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to dismiss notifications.' });

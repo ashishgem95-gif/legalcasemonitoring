@@ -4,6 +4,7 @@ const { runOrderSync } = require('../services/orderScraper');
 const { runSmartSync } = require('../services/smartSync');
 const { runHcSync } = require('../services/hcScraperService');
 const { logger } = require('../config/logger');
+const syncLock = require('../services/syncLock');
 
 let syncState = {
   running: false,
@@ -14,16 +15,29 @@ let syncState = {
   progress: null,
 };
 
-// POST /api/sync/start — basic fetch-based sync
-exports.triggerBatchSync = async (req, res) => {
-  if (syncState.running) {
+// Acquire the shared lock. Returns 409 details if another sync holds it.
+function acquire(type, res, startedMessage) {
+  if (syncLock.isLocked()) {
+    const held = syncLock.getState();
     return res.status(409).json({
       error: 'A sync is already running',
-      type: syncState.type,
-      startedAt: syncState.startedAt,
+      type: held?.type,
+      startedAt: held?.startedAt,
     });
   }
+  syncLock.tryAcquire(type);
+  syncState = { running: true, type, startedAt: new Date().toISOString(), completedAt: null, summary: null, progress: null };
+  res.json({ status: 'started', message: startedMessage, startedAt: syncState.startedAt });
+}
 
+// POST /api/sync/start — basic fetch-based sync
+exports.triggerBatchSync = async (req, res) => {
+  if (syncLock.isLocked()) {
+    const held = syncLock.getState();
+    return res.status(409).json({ error: 'A sync is already running', type: held?.type, startedAt: held?.startedAt });
+  }
+
+  syncLock.tryAcquire('fetch');
   syncState = { running: true, type: 'fetch', startedAt: new Date().toISOString(), completedAt: null, summary: null, progress: null };
 
   res.json({ status: 'started', message: 'Batch sync initiated.', startedAt: syncState.startedAt });
@@ -36,21 +50,21 @@ exports.triggerBatchSync = async (req, res) => {
   } catch (err) {
     syncState.running = false;
     syncState.summary = { error: err.message };
+  } finally {
+    syncLock.release();
   }
 };
 
 // POST /api/sync/playwright — Playwright browser-based scraper for CAT cases
 exports.triggerPlaywrightSync = async (req, res) => {
-  if (syncState.running) {
-    return res.status(409).json({
-      error: 'A sync is already running',
-      type: syncState.type,
-      startedAt: syncState.startedAt,
-    });
+  if (syncLock.isLocked()) {
+    const held = syncLock.getState();
+    return res.status(409).json({ error: 'A sync is already running', type: held?.type, startedAt: held?.startedAt });
   }
 
   const { limit = 0 } = req.body || {};
 
+  syncLock.tryAcquire('playwright');
   syncState = {
     running: true,
     type: 'playwright',
@@ -76,16 +90,19 @@ exports.triggerPlaywrightSync = async (req, res) => {
     syncState.running = false;
     syncState.summary = { error: err.message };
     logger.error({ err }, 'Playwright sync failed');
+  } finally {
+    syncLock.release();
   }
 };
 
-// GET /api/sync/status
 // POST /api/sync/orders — scrape daily order details and PDFs for all CAT cases
 exports.triggerOrderSync = async (req, res) => {
-  if (syncState.running) {
-    return res.status(409).json({ error: 'A sync is already running', type: syncState.type });
+  if (syncLock.isLocked()) {
+    const held = syncLock.getState();
+    return res.status(409).json({ error: 'A sync is already running', type: held?.type, startedAt: held?.startedAt });
   }
 
+  syncLock.tryAcquire('orders');
   syncState = { running: true, type: 'orders', startedAt: new Date().toISOString(), completedAt: null, summary: null };
 
   res.json({ status: 'started', message: 'Order scraper initiated. Extracting hearing dates and PDF links from CAT daily order pages.', startedAt: syncState.startedAt });
@@ -100,19 +117,26 @@ exports.triggerOrderSync = async (req, res) => {
     syncState.running = false;
     syncState.summary = { error: err.message };
     logger.error({ err }, 'Order sync failed');
+  } finally {
+    syncLock.release();
   }
 };
 
 // POST /api/sync/smart — Smart sync for past-due cases (returns results directly)
 exports.triggerSmartSync = async (req, res) => {
-  if (syncState.running) {
-    return res.status(409).json({ error: 'A sync is already running', type: syncState.type });
+  if (syncLock.isLocked()) {
+    const held = syncLock.getState();
+    return res.status(409).json({ error: 'A sync is already running', type: held?.type, startedAt: held?.startedAt });
   }
+
+  syncLock.tryAcquire('smart');
   syncState = { running: true, type: 'smart', startedAt: new Date().toISOString() };
 
   try {
     const result = await runSmartSync();
     syncState.running = false;
+    syncState.completedAt = new Date().toISOString();
+    syncState.summary = result;
     res.json({
       status: 'complete',
       updated: result.updated.length,
@@ -127,7 +151,10 @@ exports.triggerSmartSync = async (req, res) => {
     });
   } catch (err) {
     syncState.running = false;
+    syncState.summary = { error: err.message };
     res.status(500).json({ error: err.message });
+  } finally {
+    syncLock.release();
   }
 };
 
@@ -165,12 +192,14 @@ exports.resyncSingleCase = async (req, res) => {
 
 // POST /api/sync/hc — HC/SC Playwright scraper
 exports.triggerHcSync = async (req, res) => {
-  if (syncState.running) {
-    return res.status(409).json({ error: 'A sync is already running', type: syncState.type });
+  if (syncLock.isLocked()) {
+    const held = syncLock.getState();
+    return res.status(409).json({ error: 'A sync is already running', type: held?.type, startedAt: held?.startedAt });
   }
 
   const { limit = 0, forum = null } = req.body || {};
 
+  syncLock.tryAcquire('hc');
   syncState = { running: true, type: 'hc', startedAt: new Date().toISOString(), completedAt: null, summary: null };
 
   res.json({
@@ -189,15 +218,19 @@ exports.triggerHcSync = async (req, res) => {
     syncState.running = false;
     syncState.summary = { error: err.message };
     logger.error({ err }, 'HC sync failed');
+  } finally {
+    syncLock.release();
   }
 };
 
 // POST /api/sync/full — Run CAT smart sync + HC Playwright sync in sequence
 exports.triggerFullSync = async (req, res) => {
-  if (syncState.running) {
-    return res.status(409).json({ error: 'A sync is already running', type: syncState.type });
+  if (syncLock.isLocked()) {
+    const held = syncLock.getState();
+    return res.status(409).json({ error: 'A sync is already running', type: held?.type, startedAt: held?.startedAt });
   }
 
+  syncLock.tryAcquire('full');
   syncState = { running: true, type: 'full', startedAt: new Date().toISOString(), completedAt: null, summary: null, progress: { phase: 'cat', detail: null } };
 
   res.json({
@@ -235,5 +268,7 @@ exports.triggerFullSync = async (req, res) => {
     syncState.running = false;
     syncState.summary = { error: err.message };
     logger.error({ err }, 'Full sync failed');
+  } finally {
+    syncLock.release();
   }
 };

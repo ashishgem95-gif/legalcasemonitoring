@@ -3,15 +3,15 @@ const { run, get, all } = require('../config/dbHelper');
 const { db } = require('../config/database');
 const { callLLM } = require('./llmRouter');
 const { VALID_STAGES, STAGE_COLUMN_MAP } = require('../config/constants');
-
-let syncInProgress = false;
+const syncLock = require('./syncLock');
 
 function isSyncInProgress() {
-  return syncInProgress;
+  return syncLock.isLocked();
 }
 
 function setSyncLock(locked) {
-  syncInProgress = locked;
+  if (locked) syncLock.tryAcquire('manual');
+  else syncLock.release();
 }
 
 function stripHtmlTags(html) {
@@ -247,12 +247,12 @@ async function withRetry(fn, caseId, attempt = 0) {
 }
 
 async function checkCaseLinks(headers = {}, dueOnly = false) {
-  if (syncInProgress) {
+  if (syncLock.isLocked()) {
     console.log('[Scraper] Sync already in progress, skipping.');
     return { checkedCount: 0, newAlertsCount: 0, skipped: true };
   }
 
-  syncInProgress = true;
+  syncLock.tryAcquire('crawl');
   console.log(`[Scraper] Starting court link crawler update cycle. dueOnly: ${dueOnly}`);
   let checkedCount = 0;
   let newAlertsCount = 0;
@@ -329,9 +329,8 @@ async function checkCaseLinks(headers = {}, dueOnly = false) {
             if (newStatus === 'Disposed' || newStatus === 'Sine Die' || newStatus === 'Stay Granted') {
               updates.push('next_hearing_date = NULL');
             }
-            updates.push('WHERE id = ?');
             params.push(c.id);
-            db.prepare(`UPDATE cases SET ${updates.join(', ')}`).run(...params);
+            db.prepare(`UPDATE cases SET ${updates.join(', ')} WHERE id = ?`).run(...params);
           }
 
           if (parsed.progression_stage && STAGE_COLUMN_MAP[parsed.progression_stage]) {
@@ -385,7 +384,7 @@ async function checkCaseLinks(headers = {}, dueOnly = false) {
   } catch (err) {
     console.error('[Scraper] Global scraper process error:', err);
   } finally {
-    syncInProgress = false;
+    syncLock.release();
   }
 
   console.log(`[Scraper] Scan cycle complete. Checked: ${checkedCount}, Alerts generated: ${newAlertsCount}`);

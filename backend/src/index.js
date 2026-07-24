@@ -129,6 +129,14 @@ const server = app.listen(PORT, () => {
       excelImportController.runStartupImport().catch(err => logger.error({ err }, 'Excel startup import failed'));
     }, 8000);
   } catch (e) { logger.error({ err: e }, 'Failed to init Excel import'); }
+
+  // HC/SC Excel import on startup (non-blocking, 2s after general import)
+  try {
+    const hcExcelController = require('./controllers/hcExcelController');
+    setTimeout(() => {
+      hcExcelController.runStartupImport().catch(err => logger.error({ err }, 'HC/SC Excel startup import failed'));
+    }, 12000);
+  } catch (e) { logger.error({ err: e }, 'Failed to init HC/SC Excel import'); }
 });
 
 server.on('error', (err) => {

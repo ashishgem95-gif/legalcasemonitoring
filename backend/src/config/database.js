@@ -409,6 +409,39 @@ addColumn('users', 'last_seen_alerts_at', 'TIMESTAMP');
 
 try { db.exec("UPDATE users SET last_seen_alerts_at = CURRENT_TIMESTAMP WHERE last_seen_alerts_at IS NULL"); } catch (e) { /* table may not have column yet on fresh DB */ }
 
+// ── Status normalization ──
+// Court scrapers dump raw court text into present_status (139+ distinct values),
+// which breaks every dashboard/report filter and any "disposed vs pending" count.
+// status_category is the controlled vocabulary derived from present_status, and is
+// kept in sync automatically by triggers on every insert/update of a case.
+addColumn('cases', 'status_category', 'VARCHAR');
+
+// Single source of truth for the category mapping (mirrored in the JS backfill script).
+const STATUS_CATEGORY_SQL = `
+  CASE
+    WHEN LOWER(NEW.present_status) LIKE '%withdrawn%' THEN 'Withdrawn'
+    WHEN LOWER(NEW.present_status) LIKE '%stay%' THEN 'Stay Granted'
+    WHEN LOWER(NEW.present_status) LIKE '%sine die%' THEN 'Sine Die'
+    WHEN LOWER(NEW.present_status) LIKE '%allow%' THEN 'Allowed'
+    WHEN LOWER(NEW.present_status) LIKE '%settl%' THEN 'Settled'
+    WHEN LOWER(NEW.present_status) LIKE '%dismiss%' OR LOWER(NEW.present_status) LIKE '%dispose%' OR LOWER(NEW.present_status) LIKE '%dropped%' OR LOWER(NEW.present_status) LIKE '%closed%' OR LOWER(NEW.present_status) LIKE '%quash%' THEN 'Dismissed'
+    WHEN NEW.present_status IS NULL OR NEW.present_status = '' THEN 'Pending'
+    WHEN LOWER(NEW.present_status) LIKE '%pending%' OR LOWER(NEW.present_status) LIKE '%reply%' OR LOWER(NEW.present_status) LIKE '%filed%' OR LOWER(NEW.present_status) LIKE '%hearing%' OR LOWER(NEW.present_status) LIKE '%adjourn%' OR LOWER(NEW.present_status) LIKE '%listed%' OR LOWER(NEW.present_status) LIKE '%granted%' OR LOWER(NEW.present_status) LIKE '%notice%' OR LOWER(NEW.present_status) LIKE '%order%' OR LOWER(NEW.present_status) LIKE '%commenc%' OR LOWER(NEW.present_status) LIKE '%proceeding%' OR LOWER(NEW.present_status) LIKE '%matter%' OR LOWER(NEW.present_status) LIKE '%stage%' OR LOWER(NEW.present_status) LIKE '%argument%' THEN 'Pending'
+    ELSE 'Other'
+  END
+`;
+db.exec(`
+  CREATE TRIGGER IF NOT EXISTS cases_status_category_ai AFTER INSERT ON cases BEGIN
+    UPDATE cases SET status_category = ${STATUS_CATEGORY_SQL} WHERE id = NEW.id;
+  END;
+`);
+db.exec(`
+  CREATE TRIGGER IF NOT EXISTS cases_status_category_au AFTER UPDATE OF present_status ON cases BEGIN
+    UPDATE cases SET status_category = ${STATUS_CATEGORY_SQL} WHERE id = NEW.id;
+  END;
+`);
+console.log('status_category column and triggers verified/created.');
+
 
 // ── audit_log ──
 db.exec(`

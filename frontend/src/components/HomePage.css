@@ -514,6 +514,424 @@
 [data-theme="dark"] .homepage-footer-row { color: var(--text-muted, #64748b); }
 [data-theme="dark"] .homepage-footer-muted { color: #475569; }
 
+/* ============ Bottom row: Excel + Calendar ============ */
+.homepage-bottom-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.homepage-bottom-col {
+  min-width: 0;
+}
+
+/* ─── Excel Widget ─── */
+.home-excel-widget {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.home-excel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.home-excel-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-primary, #111827);
+  font-family: 'Outfit', sans-serif;
+}
+.home-excel-sub {
+  font-size: 0.68rem;
+  color: var(--text-muted, #6b7280);
+  font-weight: 500;
+}
+.home-excel-file {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-secondary, #f8fafc);
+  border: 1px solid var(--border-light, var(--border-color));
+  border-radius: 8px;
+}
+.home-excel-file-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.home-excel-file-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.home-excel-file-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-excel-file-name.not-found {
+  color: var(--text-muted, #6b7280);
+  font-style: italic;
+}
+.home-excel-file-meta {
+  font-size: 0.65rem;
+  color: var(--text-secondary, #4b5563);
+}
+.home-excel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+.home-excel-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.home-excel-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.home-excel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.home-excel-btn.upload-btn {
+  background: #059669;
+  color: #fff;
+}
+.home-excel-btn.upload-btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+.home-excel-btn.check-btn {
+  background: var(--accent-color, #1e3a8a);
+  color: #fff;
+}
+.home-excel-btn.check-btn:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+.home-excel-btn.check-btn:disabled {
+  background: var(--text-muted, #9ca3af);
+}
+.home-excel-error {
+  font-size: 0.72rem;
+  color: var(--red, #b91c1c);
+  font-weight: 600;
+}
+.home-excel-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.home-excel-result-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.5rem;
+}
+.home-excel-stat {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+.home-excel-stat.new { background: #dbeafe; color: #1e40af; }
+.home-excel-stat.updated { background: #d1fae5; color: #065f46; }
+.home-excel-stat.skipped { background: #f3f4f6; color: #6b7280; }
+.home-excel-stat.errors { background: #fee2e2; color: #b91c1c; }
+[data-theme="dark"] .home-excel-stat.new { background: rgba(59,130,246,0.2); color: #93c5fd; }
+[data-theme="dark"] .home-excel-stat.updated { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+[data-theme="dark"] .home-excel-stat.skipped { background: rgba(148,163,184,0.15); color: #94a3b8; }
+[data-theme="dark"] .home-excel-stat.errors { background: rgba(239,68,68,0.2); color: #fca5a5; }
+.home-excel-history-link {
+  background: none;
+  border: none;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-color, #1e3a8a);
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  font-family: inherit;
+}
+.home-excel-history-link:hover {
+  text-decoration: underline;
+}
+
+/* ─── Calendar Widget ─── */
+.home-calendar-widget {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.home-calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.home-calendar-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-primary, #111827);
+  font-family: 'Outfit', sans-serif;
+}
+.home-calendar-today-btn {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: var(--accent-color, #1e3a8a);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.home-calendar-today-btn:hover {
+  filter: brightness(1.15);
+}
+.home-calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+.home-calendar-nav-btn {
+  font-size: 0.7rem;
+  background: transparent;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  padding: 0.15rem 0.35rem;
+  cursor: pointer;
+  color: var(--text-secondary, #4b5563);
+  line-height: 1;
+}
+.home-calendar-nav-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+.home-calendar-month-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+  min-width: 5.5rem;
+  text-align: center;
+}
+.home-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.15rem;
+  text-align: center;
+}
+.home-calendar-day-header {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-muted, #9ca3af);
+  padding: 0.2rem 0;
+  text-transform: uppercase;
+}
+.home-calendar-day {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.1rem 0;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  font-family: inherit;
+  min-height: 1.6rem;
+  transition: background 0.1s ease, border-color 0.1s ease;
+}
+.home-calendar-day:hover {
+  background: var(--card-hover-bg, rgba(0,0,0,0.04));
+  border-color: var(--border-color, #e5e7eb);
+}
+.home-calendar-day.empty { cursor: default; }
+.home-calendar-day-num {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+.home-calendar-day.is-today .home-calendar-day-num {
+  background: var(--accent-color, #1e3a8a);
+  color: #fff;
+  border-radius: 50%;
+  width: 1.3rem;
+  height: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+.home-calendar-day.has-hearings .home-calendar-day-num {
+  font-weight: 800;
+  color: var(--accent-color, #1e3a8a);
+}
+.home-calendar-day.is-selected {
+  background: rgba(30, 58, 138, 0.1);
+  border-color: var(--accent-color, #1e3a8a);
+  border-radius: 6px;
+}
+[data-theme="dark"] .home-calendar-day.is-selected {
+  background: rgba(96, 165, 250, 0.15);
+}
+.home-calendar-day-dot {
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 50%;
+  background: var(--accent-color, #1e3a8a);
+  display: block;
+}
+.home-calendar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  border-top: 1px solid var(--border-light, var(--border-color));
+  padding-top: 0.5rem;
+  margin-top: 0.25rem;
+}
+.home-calendar-list-head {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+  margin-bottom: 0.15rem;
+}
+.home-calendar-list-item {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border-light, var(--border-color));
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s ease, border-color 0.1s ease;
+}
+.home-calendar-list-item:hover {
+  background: var(--card-hover-bg, rgba(0,0,0,0.03));
+  border-color: var(--accent-color);
+}
+.home-calendar-list-ref {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-color, #1e3a8a);
+}
+.home-calendar-list-meta {
+  font-size: 0.65rem;
+  color: var(--text-secondary, #4b5563);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-calendar-list-forum {
+  font-size: 0.6rem;
+  font-weight: 600;
+  background: var(--bg-secondary, #f1f5f9);
+  color: var(--text-muted, #6b7280);
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  display: inline-block;
+  margin-top: 0.15rem;
+}
+.home-calendar-empty {
+  font-size: 0.72rem;
+  color: var(--text-muted, #6b7280);
+  text-align: center;
+  padding: 0.3rem 0;
+}
+.home-calendar-full-link {
+  background: none;
+  border: none;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-color, #1e3a8a);
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  font-family: inherit;
+  align-self: flex-start;
+}
+.home-calendar-full-link:hover {
+  text-decoration: underline;
+}
+[data-theme="dark"] .home-excel-widget,
+[data-theme="dark"] .home-calendar-widget {
+  background: var(--card-bg, #1e293b);
+  border-color: var(--border-color, #334155);
+}
+[data-theme="dark"] .home-excel-file,
+[data-theme="dark"] .home-calendar-day-header,
+[data-theme="dark"] .home-calendar-list-forum,
+[data-theme="dark"] .home-calendar-list-item:hover {
+  background: var(--card-hover-bg, rgba(255,255,255,0.04));
+}
+[data-theme="dark"] .home-excel-btn { background: var(--accent-color, #3b82f6); }
+[data-theme="dark"] .home-excel-btn.upload-btn { background: #059669; }
+[data-theme="dark"] .home-excel-btn.check-btn { background: var(--accent-color, #3b82f6); }
+.home-excel-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(30, 58, 138, 0.12);
+  color: var(--accent-color, #1e3a8a);
+  border: 1px solid rgba(30, 58, 138, 0.2);
+  margin-left: auto;
+  white-space: nowrap;
+}
+[data-theme="dark"] .home-excel-badge {
+  background: rgba(96, 165, 250, 0.15);
+  border-color: rgba(96, 165, 250, 0.25);
+  color: #93c5fd;
+}
+.home-excel-desc {
+  font-size: 0.7rem;
+  color: var(--text-secondary, #4b5563);
+  padding: 0.3rem 0.5rem;
+  background: var(--bg-secondary, #f8fafc);
+  border-radius: 6px;
+  line-height: 1.4;
+}
+.home-excel-desc strong {
+  color: var(--text-primary, #111827);
+}
+.home-excel-ok {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #065f46;
+}
+[data-theme="dark"] .home-excel-ok { color: #6ee7b7; }
+.home-excel-stat.errors-zero {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+[data-theme="dark"] .home-excel-stat.errors-zero {
+  background: rgba(148,163,184,0.15);
+  color: #94a3b8;
+}
+
 /* ============ Responsive ============ */
 @media (max-width: 1100px) {
   .homepage-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }

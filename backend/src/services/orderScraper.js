@@ -1,4 +1,5 @@
 const { run, get, all } = require('../config/dbHelper');
+const { db } = require('../config/database');
 const { logger } = require('../config/logger');
 
 const CONCURRENCY = 30;
@@ -125,6 +126,9 @@ async function scrapeCaseOrders(detailStoragePath, caseId, caseRefNo) {
     let hearingsAdded = 0;
     let pdfsStored = 0;
 
+    // All writes for this case are wrapped in a single transaction so a partial
+    // failure cannot leave the case in an inconsistent state.
+    db.transaction(() => {
     // Store hearing records
     for (const h of orders.hearings) {
       const existing = get(
@@ -165,6 +169,7 @@ async function scrapeCaseOrders(detailStoragePath, caseId, caseRefNo) {
         pdfsStored++;
       }
     }
+    });
 
     return { hearings: hearingsAdded, pdfs: pdfsStored, url: dailyUrl, totalOrders: orders.hearings.length };
   } catch (err) {

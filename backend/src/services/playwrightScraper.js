@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const { run, get, all } = require('../config/dbHelper');
+const { db } = require('../config/database');
 const { logger } = require('../config/logger');
 const { buildCourtUrls } = require('./courtUrlBuilder');
 const fs = require('fs');
@@ -253,6 +254,9 @@ async function runPlaywrightSync(options = {}) {
             const result = await scrapeCaseDetail(page, c);
             completed++;
 
+            // All writes for this case are wrapped in a single transaction so a
+            // partial failure cannot leave the case in an inconsistent state.
+            db.transaction(() => {
             // Store hearing records
             for (const h of result.hearings) {
               const date = parseDate(h.date);
@@ -288,6 +292,7 @@ async function runPlaywrightSync(options = {}) {
               run('UPDATE cases SET date_filing_reply = ? WHERE id = ?',
                 [parseDate(result.metadata.filingDate), c.id]);
             }
+            });
 
             pdfsTotal += result.pdfs.filter(p => !p.url?.includes('view_daily')).length;
 
