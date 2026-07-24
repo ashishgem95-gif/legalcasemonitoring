@@ -18,7 +18,8 @@ services:
       # ── Persistent data ──
       # The WAL + SHM companion files auto-magically appear on the host
       # alongside legal_tracker.db (SQLite creates them in the same dir).
-      - ./legal_tracker.db:/app/legal_tracker.db
+      # Mount to deployPath so database.js finds the DB
+      - ./legal_tracker.db:/app/backend/legal_tracker.db
       - ./backups:/app/backups
       - ./document_archive:/app/document_archive
       - ./root:/app/root

@@ -7,9 +7,11 @@ set -e
 
 # Create empty data files if they don't exist (Docker bind-mount creates
 # directories for missing paths; this converts them to files).
-if [ ! -f /app/legal_tracker.db ]; then
-  echo "Entrypoint: creating empty legal_tracker.db"
-  touch /app/legal_tracker.db
+DB_PATH="${DB_PATH:-/app/backend/legal_tracker.db}"
+if [ ! -f "$DB_PATH" ]; then
+  echo "Entrypoint: creating empty $DB_PATH"
+  mkdir -p "$(dirname "$DB_PATH")"
+  touch "$DB_PATH"
 fi
 
 # Ensure data directories exist
