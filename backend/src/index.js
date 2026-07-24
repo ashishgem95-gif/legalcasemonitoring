@@ -1,3 +1,5 @@
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config({ path: require('path').resolve(__dirname, '..', '.env') });
 const express = require('express');
 const cors = require('cors');
@@ -62,7 +64,7 @@ app.use('/api', (req, res, next) => {
   generalLimiter(req, res, next);
 }, apiRoutes);
 
-// ── Health Check ──
+// ── Health Check (returns JSON even in production) ──
 app.get('/', (req, res) => {
   let dbStats = null;
   try {
@@ -78,9 +80,28 @@ app.get('/', (req, res) => {
     message: 'Legal Case Monitoring System API is active.',
     version: '2.0.0',
     timestamp: new Date().toISOString(),
-    database: dbStats,
+    dbStats,
   });
 });
+
+// ── Production: serve built frontend ──
+if (process.env.NODE_ENV === 'production') {
+  const frontendDist = path.resolve(__dirname, '..', '..', 'frontend', 'dist');
+  logger.info({ frontendDist }, 'Production mode: serving built frontend');
+
+  app.use(express.static(frontendDist));
+
+  // SPA fallback — any non-API, non-asset GET returns index.html
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/documents/')) return next();
+    const indexPath = path.join(frontendDist, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      next();
+    }
+  });
+}
 
 // ── Error Handler ──
 app.use((err, req, res, _next) => {

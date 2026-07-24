@@ -1,0 +1,26 @@
+[Unit]
+Description=Legal Case Monitoring System
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/legal-case-monitoring
+ExecStart=/usr/bin/node backend/src/index.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+Environment=PORT=5000
+Environment=AUTO_CRAWL_ON_START=true
+# ── HC/SC Excel import path (optional) ──
+# Environment=HC_EXCEL_IMPORT_PATH=/home/pi/legal-case-monitoring/root/hc_legal_cases.xlsx
+# ── General Excel import path (optional) ──
+# Environment=EXCEL_IMPORT_PATH=/home/pi/legal-case-monitoring/root/clean_data.xlsx
+
+# Security / file descriptor limits
+LimitNOFILE=65536
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
