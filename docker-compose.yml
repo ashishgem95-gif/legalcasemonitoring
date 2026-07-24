@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: legal-case-monitoring
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - AUTO_CRAWL_ON_START=true
+    env_file:
+      - ./backend/.env
+    volumes:
+      # ── Persistent data ──
+      # The WAL + SHM companion files auto-magically appear on the host
+      # alongside legal_tracker.db (SQLite creates them in the same dir).
+      - ./legal_tracker.db:/app/legal_tracker.db
+      - ./backups:/app/backups
+      - ./document_archive:/app/document_archive
+      - ./root:/app/root
+      # ── Secrets (API keys) ──
+      - ./backend/.env:/app/backend/.env
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+        reservations:
+          memory: 512M

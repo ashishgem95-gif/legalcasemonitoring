@@ -5,20 +5,62 @@
 - At least 4 GB free disk
 - GitHub Personal Access Token (for clone/pull)
 
-## Quick start (one-command)
+## Option A — Docker (recommended, most portable)
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/ashishgem95-gif/legal-case-monitoring-pi.git ~/legal-case-monitoring
+cd ~/legal-case-monitoring
+
+# 2. Copy your existing DB + create env file
+#    If you already have a legal_tracker.db from another machine, copy it here.
+#    Otherwise the app creates a fresh one on first start.
+#    Then:
+nano backend/.env      # set GEMINI_API_KEY etc.
+
+# 3. Build and start
+docker compose up -d --build
+
+# 4. Check logs
+docker compose logs -f
+
+# App is running at http://<your-pi-ip>:5000
+```
+
+### Docker commands
+
+| Action | Command |
+|--------|---------|
+| Start | `docker compose up -d` |
+| Stop | `docker compose down` |
+| Rebuild + start | `docker compose up -d --build` |
+| Logs | `docker compose logs -f` |
+| Rebuild after git pull | `git pull && docker compose up -d --build` |
+
+### Updating after a code change
+
+```bash
+cd ~/legal-case-monitoring
+git pull
+docker compose up -d --build   # rebuilds with new code, existing data preserved
+```
+
+---
+
+## Option B — systemd (without Docker)
 
 ```bash
 sudo apt install -y git
-git clone <DEPLOY-REPO-URL> ~/legal-case-monitoring
+git clone https://github.com/ashishgem95-gif/legal-case-monitoring-pi.git ~/legal-case-monitoring
 cd ~/legal-case-monitoring
 sudo bash deploy/setup-pi.sh
 ```
 
-The script handles everything below automatically.
-
 ---
 
-## Manual steps
+## Manual setup (debugging / customising)
+
+### 1. Clone the project
 
 ### 1. Clone the project
 ```bash
