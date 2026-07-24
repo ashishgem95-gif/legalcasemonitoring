@@ -43,6 +43,7 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 ENV NODE_ENV=production
 ENV PORT=5000
 ENV AUTO_CRAWL_ON_START=true
+ENV SQLITE_JOURNAL=DELETE
 EXPOSE 5000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

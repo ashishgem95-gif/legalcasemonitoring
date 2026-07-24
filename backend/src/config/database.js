@@ -61,8 +61,15 @@ console.log('Final database path:', dbPath);
 
 const db = new Database(dbPath);
 
-// Enable WAL mode and foreign keys
-db.pragma('journal_mode = WAL');
+// Use DELETE journal mode when running inside Docker (single-file SQLite mount).
+// WAL mode creates companion .db-wal and .db-shm files that won't persist
+// correctly when only the main .db file is bind-mounted into a container.
+if (process.env.SQLITE_JOURNAL === 'WAL') {
+  db.pragma('journal_mode = WAL');
+} else {
+  db.pragma('journal_mode = DELETE');
+  db.pragma('synchronous = FULL');
+}
 db.pragma('foreign_keys = ON');
 console.log('Connected to database at:', dbPath);
 console.log('Foreign key support enabled.');
