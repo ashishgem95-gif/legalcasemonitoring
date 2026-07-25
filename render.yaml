@@ -1,20 +1,20 @@
 services:
   - type: web
-    name: legal-case-monitoring
+    name: legalcasemonitoring
     env: node
     region: singapore
     plan: free
     buildCommand: |-
       cd frontend && npm install && npm run build && cd ../backend && npm install
     startCommand: node backend/src/index.js
-    healthCheckPath: /
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
       - key: ALLOWED_ORIGINS
-        value: https://deployproject-tawny.vercel.app,https://legal-case-monitoring.onrender.com
+        value: https://deployproject-tawny.vercel.app,https://legalcasemonitoring.onrender.com
       - key: SESSION_SECRET
         generateValue: true
       - key: AUTO_CRAWL_ON_START

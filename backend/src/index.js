@@ -64,8 +64,8 @@ app.use('/api', (req, res, next) => {
   generalLimiter(req, res, next);
 }, apiRoutes);
 
-// ── Health Check (returns JSON even in production) ──
-app.get('/', (req, res) => {
+// ── Health Check (only JSON when explicitly requested) ──
+app.get('/health', (req, res) => {
   let dbStats = null;
   try {
     const { db } = require('./config/database');
@@ -87,13 +87,13 @@ app.get('/', (req, res) => {
 // ── Production: serve built frontend ──
 if (process.env.NODE_ENV === 'production') {
   const frontendDist = path.resolve(__dirname, '..', '..', 'frontend', 'dist');
-  logger.info({ frontendDist }, 'Production mode: serving built frontend');
+  fs.existsSync(frontendDist) && logger.info({ frontendDist }, 'Production mode: serving built frontend');
 
   app.use(express.static(frontendDist));
 
   // SPA fallback — any non-API, non-asset GET returns index.html
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api/') || req.path.startsWith('/documents/')) return next();
+    if (req.path.startsWith('/api/') || req.path.startsWith('/documents/') || req.path === '/health') return next();
     const indexPath = path.join(frontendDist, 'index.html');
     if (fs.existsSync(indexPath)) {
       res.sendFile(indexPath);
@@ -102,6 +102,17 @@ if (process.env.NODE_ENV === 'production') {
     }
   });
 }
+
+// Fallback root for non-production or missing frontend build
+app.get('/', (req, res, next) => {
+  const { NODE_ENV } = process.env;
+  const frontendDist = path.resolve(__dirname, '..', '..', 'frontend', 'dist');
+  const indexPath = path.join(frontendDist, 'index.html');
+  if (NODE_ENV === 'production' && fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  next();
+});
 
 // ── Error Handler ──
 app.use((err, req, res, _next) => {
