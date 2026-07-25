@@ -1,11 +1,10 @@
 services:
   - type: web
-    name: legalcasemonitoring
+    name: casemon
     env: node
     region: singapore
     plan: free
-    buildCommand: |-
-      cd frontend && npm install && npm run build && cd ../backend && npm install
+    buildCommand: cd backend && npm install
     startCommand: node backend/src/index.js
     healthCheckPath: /health
     envVars:
@@ -14,7 +13,7 @@ services:
       - key: PORT
         value: 10000
       - key: ALLOWED_ORIGINS
-        value: https://deployproject-tawny.vercel.app,https://legalcasemonitoring.onrender.com
+        value: https://casemon.onrender.com,https://frontend-vert-one-73.vercel.app
       - key: SESSION_SECRET
         generateValue: true
       - key: AUTO_CRAWL_ON_START
