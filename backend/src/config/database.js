@@ -5,12 +5,24 @@ const crypto = require('crypto');
 
 const PASSWORD_ITERATIONS = 600000;
 
-// Use Railway volume if mounted, otherwise default path
+// Detect the deployment path by trying common locations
 const volumePath = '/data/legal_tracker.db';
-const deployPath = path.resolve(__dirname, '..', '..', 'legal_tracker.db');
-let dbPath = deployPath;
+const possiblePaths = [
+  path.resolve(__dirname, '..', '..', 'legal_tracker.db'),          // backend/legal_tracker.db
+  path.resolve(__dirname, '..', '..', '..', 'legal_tracker.db'),    // root/legal_tracker.db
+];
+let dbPath = possiblePaths[0];
+let deployPath = possiblePaths[0];
 
-// Check if volume directory exists and is writable
+// Find the first existing DB file
+for (const p of possiblePaths) {
+  if (fs.existsSync(p)) {
+    deployPath = p;
+    dbPath = p;
+    break;
+  }
+}
+
 const dataDirExists = fs.existsSync('/data');
 const volumeDbExists = fs.existsSync(volumePath);
 
