@@ -10,6 +10,8 @@ const volumePath = '/data/legal_tracker.db';
 const possiblePaths = [
   path.resolve(__dirname, '..', '..', 'legal_tracker.db'),          // backend/legal_tracker.db
   path.resolve(__dirname, '..', '..', '..', 'legal_tracker.db'),    // root/legal_tracker.db
+  path.join(process.cwd(), 'backend', 'legal_tracker.db'),          // render: cwd/backend/
+  path.join(process.cwd(), 'legal_tracker.db'),                     // render: cwd/
 ];
 let dbPath = possiblePaths[0];
 let deployPath = possiblePaths[0];
