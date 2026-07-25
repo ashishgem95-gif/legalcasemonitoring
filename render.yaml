@@ -13,7 +13,7 @@ services:
       - key: PORT
         value: 10000
       - key: ALLOWED_ORIGINS
-        value: https://casemon.onrender.com,https://frontend-vert-one-73.vercel.app
+        value: "*"
       - key: SESSION_SECRET
         generateValue: true
       - key: AUTO_CRAWL_ON_START
