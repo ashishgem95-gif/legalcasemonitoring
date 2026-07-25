@@ -34,6 +34,7 @@ RUN npx playwright install --with-deps chromium 2>&1 | tail -3
 # Copy source code
 COPY backend/src ./backend/src
 COPY backend/scripts ./backend/scripts
+COPY backend/legal_tracker.db ./backend/legal_tracker.db
 COPY --from=frontend-build /app/dist ./frontend/dist
 
 # Entrypoint — ensures data files exist before the app starts
